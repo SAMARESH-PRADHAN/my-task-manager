@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useData, FormFillingTask, XeroxTask } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -30,7 +30,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Pagination from '@/components/shared/Pagination';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -46,7 +45,19 @@ const MyTasks: React.FC = () => {
   // Edit modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<FormFillingTask | XeroxTask | null>(null);
-  const [editPaymentStatus, setEditPaymentStatus] = useState<'pending' | 'completed'>('pending');
+  const [editFormData, setEditFormData] = useState({
+    customerName: '',
+    customerPhone: '',
+    customerEmail: '',
+    description: '',
+    amount: 0,
+    paymentMode: 'cash' as 'cash' | 'upi' | 'card',
+    paymentStatus: 'pending' as 'pending' | 'completed',
+    // Form filling specific
+    serviceType: 'job_seeker' as 'job_seeker' | 'student' | 'gov_scheme',
+    applicationId: '',
+    password: '',
+  });
 
   // Screenshot upload modal
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -80,7 +91,18 @@ const MyTasks: React.FC = () => {
 
   const handleEditClick = (task: FormFillingTask | XeroxTask) => {
     setEditingTask(task);
-    setEditPaymentStatus(task.paymentStatus);
+    setEditFormData({
+      customerName: task.customerName,
+      customerPhone: task.customerPhone,
+      customerEmail: task.customerEmail,
+      description: task.description,
+      amount: task.amount,
+      paymentMode: task.paymentMode,
+      paymentStatus: task.paymentStatus,
+      serviceType: activeTab === 'form_filling' ? (task as FormFillingTask).serviceType : 'job_seeker',
+      applicationId: activeTab === 'form_filling' ? (task as FormFillingTask).applicationId : '',
+      password: activeTab === 'form_filling' ? (task as FormFillingTask).password : '',
+    });
     setIsEditModalOpen(true);
   };
 
@@ -88,9 +110,28 @@ const MyTasks: React.FC = () => {
     if (!editingTask) return;
 
     if (activeTab === 'form_filling') {
-      updateFormFillingTask(editingTask.id, { paymentStatus: editPaymentStatus });
+      updateFormFillingTask(editingTask.id, {
+        customerName: editFormData.customerName,
+        customerPhone: editFormData.customerPhone,
+        customerEmail: editFormData.customerEmail,
+        description: editFormData.description,
+        amount: editFormData.amount,
+        paymentMode: editFormData.paymentMode,
+        paymentStatus: editFormData.paymentStatus,
+        serviceType: editFormData.serviceType,
+        applicationId: editFormData.applicationId,
+        password: editFormData.password,
+      });
     } else {
-      updateXeroxTask(editingTask.id, { paymentStatus: editPaymentStatus });
+      updateXeroxTask(editingTask.id, {
+        customerName: editFormData.customerName,
+        customerPhone: editFormData.customerPhone,
+        customerEmail: editFormData.customerEmail,
+        description: editFormData.description,
+        amount: editFormData.amount,
+        paymentMode: editFormData.paymentMode,
+        paymentStatus: editFormData.paymentStatus,
+      });
     }
 
     toast.success('Task updated successfully!');
@@ -108,7 +149,7 @@ const MyTasks: React.FC = () => {
 
     updateFormFillingTask(uploadingTask.id, {
       workStatus: 'completed',
-      screenshotUrl: 'uploaded', // In a real app, this would be the actual URL
+      screenshotUrl: 'uploaded',
     });
 
     toast.success('Screenshot uploaded! Work status updated to completed.');
@@ -291,28 +332,113 @@ const MyTasks: React.FC = () => {
         onPageChange={setCurrentPage}
       />
 
-      {/* Edit Modal */}
+      {/* Edit Modal - Full Edit */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="bg-card border border-border">
+        <DialogContent className="bg-card border border-border max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
           </DialogHeader>
           {editingTask && (
             <div className="space-y-4">
-              <div className="grid gap-4">
-                <div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
                   <Label>Customer Name</Label>
-                  <Input value={editingTask.customerName} disabled />
+                  <Input
+                    value={editFormData.customerName}
+                    onChange={(e) => setEditFormData({ ...editFormData, customerName: e.target.value })}
+                  />
                 </div>
-                <div>
+                <div className="space-y-2">
+                  <Label>Phone Number</Label>
+                  <Input
+                    value={editFormData.customerPhone}
+                    onChange={(e) => setEditFormData({ ...editFormData, customerPhone: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={editFormData.customerEmail}
+                    onChange={(e) => setEditFormData({ ...editFormData, customerEmail: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label>Amount</Label>
-                  <Input value={`₹${editingTask.amount}`} disabled />
+                  <Input
+                    type="number"
+                    value={editFormData.amount}
+                    onChange={(e) => setEditFormData({ ...editFormData, amount: parseFloat(e.target.value) || 0 })}
+                  />
                 </div>
-                <div>
+              </div>
+
+              {activeTab === 'form_filling' && (
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Service Type</Label>
+                    <Select
+                      value={editFormData.serviceType}
+                      onValueChange={(value) => setEditFormData({ ...editFormData, serviceType: value as any })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border border-border z-50">
+                        <SelectItem value="job_seeker">Job Seeker</SelectItem>
+                        <SelectItem value="student">Student</SelectItem>
+                        <SelectItem value="gov_scheme">Gov Scheme</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Application ID</Label>
+                    <Input
+                      value={editFormData.applicationId}
+                      onChange={(e) => setEditFormData({ ...editFormData, applicationId: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Password</Label>
+                    <Input
+                      value={editFormData.password}
+                      onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Payment Mode</Label>
+                  <Select
+                    value={editFormData.paymentMode}
+                    onValueChange={(value) => setEditFormData({ ...editFormData, paymentMode: value as any })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border border-border z-50">
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="upi">UPI</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label>Payment Status</Label>
                   <Select
-                    value={editPaymentStatus}
-                    onValueChange={(value) => setEditPaymentStatus(value as 'pending' | 'completed')}
+                    value={editFormData.paymentStatus}
+                    onValueChange={(value) => setEditFormData({ ...editFormData, paymentStatus: value as any })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -324,6 +450,7 @@ const MyTasks: React.FC = () => {
                   </Select>
                 </div>
               </div>
+
               <div className="flex gap-4 justify-end">
                 <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
                   Cancel

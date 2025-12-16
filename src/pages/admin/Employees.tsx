@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, MoreVertical, Edit, Eye, Download } from 'lucide-react';
+import { Plus, MoreVertical, Edit, Eye, Download, FileText, Clock, IndianRupee } from 'lucide-react';
 import { useData, Employee, FormFillingTask, XeroxTask } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,6 +88,20 @@ const Employees: React.FC = () => {
       .map((n) => n[0])
       .join('')
       .toUpperCase();
+  };
+
+  // Get employee stats
+  const getEmployeeStats = (employeeId: string) => {
+    const empFormFilling = formFillingTasks.filter((t) => t.employeeId === employeeId);
+    const empXerox = xeroxTasks.filter((t) => t.employeeId === employeeId);
+    
+    const totalTasks = empFormFilling.length + empXerox.length;
+    const pendingTasks = empFormFilling.filter((t) => t.workStatus === 'pending' || t.paymentStatus === 'pending').length 
+      + empXerox.filter((t) => t.paymentStatus === 'pending').length;
+    const totalRevenue = empFormFilling.reduce((sum, t) => sum + t.amount, 0) 
+      + empXerox.reduce((sum, t) => sum + t.amount, 0);
+
+    return { totalTasks, pendingTasks, totalRevenue };
   };
 
   const handleAddEmployee = () => {
@@ -200,56 +214,79 @@ const Employees: React.FC = () => {
       />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {paginatedEmployees.map((employee) => (
-          <Card key={employee.id} className="shadow-card animate-slide-up">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-14 w-14">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                      {getInitials(employee.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-lg text-foreground">{employee.name}</h3>
-                    <p className="text-sm text-muted-foreground">{employee.email}</p>
-                    <p className="text-sm text-muted-foreground">{employee.phone}</p>
+        {paginatedEmployees.map((employee) => {
+          const stats = getEmployeeStats(employee.id);
+          return (
+            <Card key={employee.id} className="shadow-card animate-slide-up">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-14 w-14">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+                        {getInitials(employee.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-semibold text-lg text-foreground">{employee.name}</h3>
+                      <p className="text-sm text-muted-foreground">{employee.email}</p>
+                      <p className="text-sm text-muted-foreground">{employee.phone}</p>
+                    </div>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="bg-popover border border-border z-50" align="end">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setEditingEmployee(employee);
+                          setIsEditModalOpen(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setViewingEmployee(employee);
+                          setIsViewTasksModalOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Tasks
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                
+                {/* Employee Stats */}
+                <div className="mt-4 pt-4 border-t border-border grid grid-cols-3 gap-2">
+                  <div className="flex flex-col items-center p-2 bg-muted/50 rounded-lg">
+                    <FileText className="h-4 w-4 text-primary mb-1" />
+                    <span className="text-lg font-bold text-foreground">{stats.totalTasks}</span>
+                    <span className="text-xs text-muted-foreground">Total Tasks</span>
+                  </div>
+                  <div className="flex flex-col items-center p-2 bg-muted/50 rounded-lg">
+                    <Clock className="h-4 w-4 text-warning mb-1" />
+                    <span className="text-lg font-bold text-foreground">{stats.pendingTasks}</span>
+                    <span className="text-xs text-muted-foreground">Pending</span>
+                  </div>
+                  <div className="flex flex-col items-center p-2 bg-muted/50 rounded-lg">
+                    <IndianRupee className="h-4 w-4 text-success mb-1" />
+                    <span className="text-lg font-bold text-foreground">₹{stats.totalRevenue}</span>
+                    <span className="text-xs text-muted-foreground">Revenue</span>
                   </div>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-popover border border-border z-50" align="end">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setEditingEmployee(employee);
-                        setIsEditModalOpen(true);
-                      }}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setViewingEmployee(employee);
-                        setIsViewTasksModalOpen(true);
-                      }}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Tasks
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <div className="mt-4 pt-4 border-t border-border">
-                <p className="text-sm text-muted-foreground">{employee.address}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+
+                <div className="mt-3 pt-3 border-t border-border">
+                  <p className="text-sm text-muted-foreground">{employee.address}</p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <Pagination

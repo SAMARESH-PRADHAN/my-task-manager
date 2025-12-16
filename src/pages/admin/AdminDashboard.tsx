@@ -1,10 +1,10 @@
 import React from 'react';
-import { Users, FileText, IndianRupee, TrendingUp, Copy, Briefcase, GraduationCap, Building } from 'lucide-react';
+import { FileText, IndianRupee, TrendingUp, Clock, Copy, Briefcase, GraduationCap, Building } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
 import StatCard from '@/components/shared/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Area, AreaChart } from 'recharts';
 
 const AdminDashboard: React.FC = () => {
   const { formFillingTasks, xeroxTasks, employees, customers } = useData();
@@ -20,6 +20,11 @@ const AdminDashboard: React.FC = () => {
     todayFormFilling.reduce((sum, t) => sum + t.amount, 0) +
     todayXerox.reduce((sum, t) => sum + t.amount, 0);
 
+  // Pending tasks count
+  const pendingFormFilling = formFillingTasks.filter((t) => t.workStatus === 'pending' || t.paymentStatus === 'pending');
+  const pendingXerox = xeroxTasks.filter((t) => t.paymentStatus === 'pending');
+  const totalPendingTasks = pendingFormFilling.length + pendingXerox.length;
+
   // Service distribution data
   const jobSeekerCount = formFillingTasks.filter((t) => t.serviceType === 'job_seeker').length;
   const studentCount = formFillingTasks.filter((t) => t.serviceType === 'student').length;
@@ -31,6 +36,19 @@ const AdminDashboard: React.FC = () => {
     { name: 'Student', value: studentCount, color: 'hsl(var(--chart-2))' },
     { name: 'Gov Scheme', value: govSchemeCount, color: 'hsl(var(--chart-3))' },
     { name: 'Xerox/Other', value: xeroxCount, color: 'hsl(var(--chart-4))' },
+  ];
+
+  // Revenue by service type
+  const jobSeekerRevenue = formFillingTasks.filter((t) => t.serviceType === 'job_seeker').reduce((sum, t) => sum + t.amount, 0);
+  const studentRevenue = formFillingTasks.filter((t) => t.serviceType === 'student').reduce((sum, t) => sum + t.amount, 0);
+  const govSchemeRevenue = formFillingTasks.filter((t) => t.serviceType === 'gov_scheme').reduce((sum, t) => sum + t.amount, 0);
+  const xeroxRevenue = xeroxTasks.reduce((sum, t) => sum + t.amount, 0);
+
+  const revenueByService = [
+    { name: 'Job Seeker', revenue: jobSeekerRevenue, fill: 'hsl(var(--chart-1))' },
+    { name: 'Student', revenue: studentRevenue, fill: 'hsl(var(--chart-2))' },
+    { name: 'Gov Scheme', revenue: govSchemeRevenue, fill: 'hsl(var(--chart-3))' },
+    { name: 'Xerox/Other', revenue: xeroxRevenue, fill: 'hsl(var(--chart-4))' },
   ];
 
   // Employee performance (by revenue)
@@ -65,10 +83,10 @@ const AdminDashboard: React.FC = () => {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Employees"
-          value={employees.length}
-          icon={Users}
-          iconClassName="bg-primary"
+          title="Pending Tasks"
+          value={totalPendingTasks}
+          icon={Clock}
+          iconClassName="bg-warning"
         />
         <StatCard
           title="Today's Tasks"
@@ -89,6 +107,37 @@ const AdminDashboard: React.FC = () => {
           iconClassName="bg-info"
         />
       </div>
+
+      {/* Revenue Chart */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="text-lg">Revenue by Service Type</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={revenueByService}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="name" />
+                <YAxis tickFormatter={(value) => `₹${value}`} />
+                <Tooltip
+                  formatter={(value) => [`₹${value}`, 'Revenue']}
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--popover))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
+                  {revenueByService.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Service Distribution */}
