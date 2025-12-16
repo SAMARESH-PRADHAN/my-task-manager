@@ -45,13 +45,13 @@
 
     --radius: 0.75rem;
 
-    --sidebar-background: 220 20% 14%;
-    --sidebar-foreground: 220 10% 90%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 20% 10%;
     --sidebar-primary: 220 90% 56%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 20% 20%;
-    --sidebar-accent-foreground: 220 10% 90%;
-    --sidebar-border: 220 20% 22%;
+    --sidebar-accent: 220 15% 94%;
+    --sidebar-accent-foreground: 220 20% 10%;
+    --sidebar-border: 220 15% 88%;
     --sidebar-ring: 220 90% 56%;
 
     --chart-1: 220 90% 56%;

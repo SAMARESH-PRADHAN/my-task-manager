@@ -11,7 +11,7 @@ const menuItems = [
 
 const EmployeeSidebar: React.FC = () => {
   return (
-    <aside className="hidden lg:flex w-64 flex-col bg-sidebar border-r border-sidebar-border">
+    <aside className="hidden lg:flex w-64 min-w-64 max-w-64 flex-col bg-sidebar border-r border-sidebar-border flex-shrink-0">
       <div className="flex h-16 items-center justify-center border-b border-sidebar-border">
         <span className="text-lg font-bold text-sidebar-foreground">Employee Panel</span>
       </div>
