@@ -16,9 +16,10 @@ const AdminDashboard: React.FC = () => {
   const todayFormFilling = formFillingTasks.filter((t) => new Date(t.createdAt) >= today);
   const todayXerox = xeroxTasks.filter((t) => new Date(t.createdAt) >= today);
 
+  // Use revenue instead of amount for final amount
   const todayRevenue =
-    todayFormFilling.reduce((sum, t) => sum + t.amount, 0) +
-    todayXerox.reduce((sum, t) => sum + t.amount, 0);
+    todayFormFilling.reduce((sum, t) => sum + (t.revenue || t.amount), 0) +
+    todayXerox.reduce((sum, t) => sum + (t.revenue || t.amount), 0);
 
   // Pending tasks count
   const pendingFormFilling = formFillingTasks.filter((t) => t.workStatus === 'pending' || t.paymentStatus === 'pending');
@@ -38,11 +39,11 @@ const AdminDashboard: React.FC = () => {
     { name: 'Xerox/Other', value: xeroxCount, color: 'hsl(var(--chart-4))' },
   ];
 
-  // Revenue by service type
-  const jobSeekerRevenue = formFillingTasks.filter((t) => t.serviceType === 'job_seeker').reduce((sum, t) => sum + t.amount, 0);
-  const studentRevenue = formFillingTasks.filter((t) => t.serviceType === 'student').reduce((sum, t) => sum + t.amount, 0);
-  const govSchemeRevenue = formFillingTasks.filter((t) => t.serviceType === 'gov_scheme').reduce((sum, t) => sum + t.amount, 0);
-  const xeroxRevenue = xeroxTasks.reduce((sum, t) => sum + t.amount, 0);
+  // Revenue by service type (using revenue field)
+  const jobSeekerRevenue = formFillingTasks.filter((t) => t.serviceType === 'job_seeker').reduce((sum, t) => sum + (t.revenue || t.amount), 0);
+  const studentRevenue = formFillingTasks.filter((t) => t.serviceType === 'student').reduce((sum, t) => sum + (t.revenue || t.amount), 0);
+  const govSchemeRevenue = formFillingTasks.filter((t) => t.serviceType === 'gov_scheme').reduce((sum, t) => sum + (t.revenue || t.amount), 0);
+  const xeroxRevenue = xeroxTasks.reduce((sum, t) => sum + (t.revenue || t.amount), 0);
 
   const revenueByService = [
     { name: 'Job Seeker', revenue: jobSeekerRevenue, fill: 'hsl(var(--chart-1))' },
@@ -55,10 +56,10 @@ const AdminDashboard: React.FC = () => {
   const employeePerformance = employees.map((emp) => {
     const empFormFilling = formFillingTasks
       .filter((t) => t.employeeId === emp.id)
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.revenue || t.amount), 0);
     const empXerox = xeroxTasks
       .filter((t) => t.employeeId === emp.id)
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.revenue || t.amount), 0);
 
     return {
       name: emp.name,

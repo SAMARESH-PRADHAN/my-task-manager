@@ -65,18 +65,18 @@ const Analytics: React.FC = () => {
     ];
   }, [filteredData]);
 
-  // Revenue by service type
+  // Revenue by service type (using revenue field)
   const revenueByService = useMemo(() => {
     const jobSeekerRevenue = filteredData.formFilling
       .filter((t) => t.serviceType === 'job_seeker')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.revenue || t.amount), 0);
     const studentRevenue = filteredData.formFilling
       .filter((t) => t.serviceType === 'student')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.revenue || t.amount), 0);
     const govSchemeRevenue = filteredData.formFilling
       .filter((t) => t.serviceType === 'gov_scheme')
-      .reduce((sum, t) => sum + t.amount, 0);
-    const xeroxRevenue = filteredData.xerox.reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.revenue || t.amount), 0);
+    const xeroxRevenue = filteredData.xerox.reduce((sum, t) => sum + (t.revenue || t.amount), 0);
 
     return [
       { name: 'Job Seeker', revenue: jobSeekerRevenue },
@@ -86,15 +86,15 @@ const Analytics: React.FC = () => {
     ];
   }, [filteredData]);
 
-  // Employee performance by revenue
+  // Employee performance by revenue (using revenue field)
   const employeePerformance = useMemo(() => {
     return employees.map((emp) => {
       const formFillingRevenue = filteredData.formFilling
         .filter((t) => t.employeeId === emp.id)
-        .reduce((sum, t) => sum + t.amount, 0);
+        .reduce((sum, t) => sum + (t.revenue || t.amount), 0);
       const xeroxRevenue = filteredData.xerox
         .filter((t) => t.employeeId === emp.id)
-        .reduce((sum, t) => sum + t.amount, 0);
+        .reduce((sum, t) => sum + (t.revenue || t.amount), 0);
 
       return {
         name: emp.name,
@@ -105,7 +105,7 @@ const Analytics: React.FC = () => {
     }).sort((a, b) => b.revenue - a.revenue);
   }, [employees, filteredData]);
 
-  // Daily trend data (last 7 days for daily, last 4 weeks for weekly, last 6 months for monthly)
+  // Daily trend data (using revenue field)
   const trendData = useMemo(() => {
     const now = new Date();
     const data = [];
@@ -125,8 +125,8 @@ const Analytics: React.FC = () => {
 
         data.push({
           date: format(date, 'dd MMM'),
-          formFilling: dayFormFilling.reduce((sum, t) => sum + t.amount, 0),
-          xerox: dayXerox.reduce((sum, t) => sum + t.amount, 0),
+          formFilling: dayFormFilling.reduce((sum, t) => sum + (t.revenue || t.amount), 0),
+          xerox: dayXerox.reduce((sum, t) => sum + (t.revenue || t.amount), 0),
         });
       }
     } else if (timeRange === 'weekly') {
@@ -144,8 +144,8 @@ const Analytics: React.FC = () => {
 
         data.push({
           date: `Week ${4 - i}`,
-          formFilling: weekFormFilling.reduce((sum, t) => sum + t.amount, 0),
-          xerox: weekXerox.reduce((sum, t) => sum + t.amount, 0),
+          formFilling: weekFormFilling.reduce((sum, t) => sum + (t.revenue || t.amount), 0),
+          xerox: weekXerox.reduce((sum, t) => sum + (t.revenue || t.amount), 0),
         });
       }
     } else {
@@ -163,8 +163,8 @@ const Analytics: React.FC = () => {
 
         data.push({
           date: format(monthDate, 'MMM'),
-          formFilling: monthFormFilling.reduce((sum, t) => sum + t.amount, 0),
-          xerox: monthXerox.reduce((sum, t) => sum + t.amount, 0),
+          formFilling: monthFormFilling.reduce((sum, t) => sum + (t.revenue || t.amount), 0),
+          xerox: monthXerox.reduce((sum, t) => sum + (t.revenue || t.amount), 0),
         });
       }
     }
@@ -172,9 +172,10 @@ const Analytics: React.FC = () => {
     return data;
   }, [formFillingTasks, xeroxTasks, timeRange]);
 
+  // Total revenue using revenue field
   const totalRevenue =
-    filteredData.formFilling.reduce((sum, t) => sum + t.amount, 0) +
-    filteredData.xerox.reduce((sum, t) => sum + t.amount, 0);
+    filteredData.formFilling.reduce((sum, t) => sum + (t.revenue || t.amount), 0) +
+    filteredData.xerox.reduce((sum, t) => sum + (t.revenue || t.amount), 0);
 
   const totalTasks = filteredData.formFilling.length + filteredData.xerox.length;
 

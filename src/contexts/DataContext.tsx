@@ -20,8 +20,10 @@ export interface FormFillingTask {
   applicationId: string;
   password: string;
   amount: number;
+  deductionAmount: number;
+  revenue: number;
   description: string;
-  paymentMode: 'cash' | 'upi' | 'card';
+  paymentMode: 'cash' | 'upi' | 'card' | '';
   workStatus: 'pending' | 'completed';
   paymentStatus: 'pending' | 'completed';
   employeeId: string;
@@ -37,8 +39,10 @@ export interface XeroxTask {
   customerEmail: string;
   customerPhone: string;
   amount: number;
+  deductionAmount: number;
+  revenue: number;
   description: string;
-  paymentMode: 'cash' | 'upi' | 'card';
+  paymentMode: 'cash' | 'upi' | 'card' | '';
   paymentStatus: 'pending' | 'completed';
   employeeId: string;
   employeeName: string;
@@ -97,6 +101,8 @@ const generateMockData = () => {
       applicationId: 'APP001',
       password: 'pass123',
       amount: 500,
+      deductionAmount: 50,
+      revenue: 450,
       description: 'Job application form',
       paymentMode: 'upi',
       workStatus: 'completed',
@@ -116,6 +122,8 @@ const generateMockData = () => {
       applicationId: 'STU001',
       password: 'student123',
       amount: 300,
+      deductionAmount: 30,
+      revenue: 270,
       description: 'Scholarship application',
       paymentMode: 'cash',
       workStatus: 'pending',
@@ -134,6 +142,8 @@ const generateMockData = () => {
       customerEmail: 'amit@email.com',
       customerPhone: '9876543003',
       amount: 150,
+      deductionAmount: 15,
+      revenue: 135,
       description: 'Document xerox - 30 pages',
       paymentMode: 'cash',
       paymentStatus: 'completed',
@@ -265,8 +275,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const todayXerox = data.xeroxTasks.filter((t) => new Date(t.createdAt) >= today);
 
     const revenue =
-      todayFormFilling.reduce((sum, t) => sum + t.amount, 0) +
-      todayXerox.reduce((sum, t) => sum + t.amount, 0);
+      todayFormFilling.reduce((sum, t) => sum + t.revenue, 0) +
+      todayXerox.reduce((sum, t) => sum + t.revenue, 0);
 
     return {
       formFilling: todayFormFilling.length,

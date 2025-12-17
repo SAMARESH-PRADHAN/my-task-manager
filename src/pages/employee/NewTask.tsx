@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
@@ -34,25 +34,34 @@ const NewTask: React.FC = () => {
   const [serviceType, setServiceType] = useState<ServiceType | ''>('');
   const [formServiceType, setFormServiceType] = useState<FormServiceType | ''>('');
 
-  // Form filling specific
+  // Form filling specific (optional)
   const [applicationId, setApplicationId] = useState('');
   const [password, setPassword] = useState('');
 
   // Common fields
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
+  const [deductionAmount, setDeductionAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState<PaymentMode | ''>('');
+
+  // Calculate revenue
+  const revenue = useMemo(() => {
+    const totalAmount = parseFloat(amount) || 0;
+    const deduction = parseFloat(deductionAmount) || 0;
+    return totalAmount - deduction;
+  }, [amount, deductionAmount]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!customerName || !customerPhone || !serviceType || !paymentMode || !amount) {
-      toast.error('Please fill all required fields');
+    // Only mandatory fields: Customer Name, Phone Number, Service Type
+    if (!customerName || !customerPhone || !serviceType) {
+      toast.error('Please fill all required fields (Customer Name, Phone, Service Type)');
       return;
     }
 
-    if (serviceType === 'form_filling' && (!formServiceType || !applicationId || !password)) {
-      toast.error('Please fill all form filling details');
+    if (serviceType === 'form_filling' && !formServiceType) {
+      toast.error('Please select form service type');
       return;
     }
 
@@ -65,6 +74,10 @@ const NewTask: React.FC = () => {
       type: customerType,
     });
 
+    const totalAmount = parseFloat(amount) || 0;
+    const deduction = parseFloat(deductionAmount) || 0;
+    const calculatedRevenue = totalAmount - deduction;
+
     if (serviceType === 'form_filling') {
       addFormFillingTask({
         customerId: customer.id,
@@ -75,9 +88,11 @@ const NewTask: React.FC = () => {
         serviceType: formServiceType as FormServiceType,
         applicationId,
         password,
-        amount: parseFloat(amount),
+        amount: totalAmount,
+        deductionAmount: deduction,
+        revenue: calculatedRevenue,
         description,
-        paymentMode: paymentMode as PaymentMode,
+        paymentMode: paymentMode as PaymentMode | '',
         workStatus: 'pending',
         paymentStatus: 'pending',
         employeeId: user?.id || '',
@@ -89,9 +104,11 @@ const NewTask: React.FC = () => {
         customerName,
         customerEmail,
         customerPhone,
-        amount: parseFloat(amount),
+        amount: totalAmount,
+        deductionAmount: deduction,
+        revenue: calculatedRevenue,
         description,
-        paymentMode: paymentMode as PaymentMode,
+        paymentMode: paymentMode as PaymentMode | '',
         paymentStatus: 'pending',
         employeeId: user?.id || '',
         employeeName: user?.name || '',
@@ -149,7 +166,7 @@ const NewTask: React.FC = () => {
                 type="email"
                 value={customerEmail}
                 onChange={(e) => setCustomerEmail(e.target.value)}
-                placeholder="Enter email address"
+                placeholder="Enter email address (optional)"
               />
             </div>
           </CardContent>
@@ -205,23 +222,21 @@ const NewTask: React.FC = () => {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="applicationId">Application ID *</Label>
+                    <Label htmlFor="applicationId">Application ID</Label>
                     <Input
                       id="applicationId"
                       value={applicationId}
                       onChange={(e) => setApplicationId(e.target.value)}
-                      placeholder="Enter application ID"
-                      required={serviceType === 'form_filling'}
+                      placeholder="Enter application ID (optional)"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password *</Label>
+                    <Label htmlFor="password">Password</Label>
                     <Input
                       id="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter password"
-                      required={serviceType === 'form_filling'}
+                      placeholder="Enter password (optional)"
                     />
                   </div>
                 </div>
@@ -229,13 +244,13 @@ const NewTask: React.FC = () => {
             )}
 
             <div className="space-y-2">
-              <Label>Payment Mode *</Label>
+              <Label>Payment Mode</Label>
               <Select
                 value={paymentMode}
                 onValueChange={(value) => setPaymentMode(value as PaymentMode)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select payment mode" />
+                  <SelectValue placeholder="Select payment mode (optional)" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border border-border z-50">
                   <SelectItem value="cash">Cash</SelectItem>
@@ -251,22 +266,41 @@ const NewTask: React.FC = () => {
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Enter work description"
+                placeholder="Enter work description (optional)"
                 rows={3}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount (₹) *</Label>
-              <Input
-                id="amount"
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Enter amount"
-                min="0"
-                required
-              />
+            {/* Amount Section */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="amount">Total Amount (₹)</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="Enter total amount"
+                  min="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deductionAmount">Deduction Amount (₹)</Label>
+                <Input
+                  id="deductionAmount"
+                  type="number"
+                  value={deductionAmount}
+                  onChange={(e) => setDeductionAmount(e.target.value)}
+                  placeholder="Enter deduction"
+                  min="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Revenue (₹)</Label>
+                <div className="h-10 px-3 py-2 rounded-md border border-input bg-muted flex items-center font-semibold text-primary">
+                  ₹{revenue.toFixed(2)}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
