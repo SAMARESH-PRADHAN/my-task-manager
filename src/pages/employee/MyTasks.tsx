@@ -51,7 +51,9 @@ const MyTasks: React.FC = () => {
     customerEmail: '',
     description: '',
     amount: 0,
-    paymentMode: 'cash' as 'cash' | 'upi' | 'card',
+    deductionAmount: 0,
+    revenue: 0,
+    paymentMode: 'cash' as 'cash' | 'upi' | 'card' | '',
     paymentStatus: 'pending' as 'pending' | 'completed',
     // Form filling specific
     serviceType: 'job_seeker' as 'job_seeker' | 'student' | 'gov_scheme',
@@ -97,6 +99,8 @@ const MyTasks: React.FC = () => {
       customerEmail: task.customerEmail,
       description: task.description,
       amount: task.amount,
+      deductionAmount: task.deductionAmount || 0,
+      revenue: task.revenue || task.amount,
       paymentMode: task.paymentMode,
       paymentStatus: task.paymentStatus,
       serviceType: activeTab === 'form_filling' ? (task as FormFillingTask).serviceType : 'job_seeker',
@@ -104,6 +108,12 @@ const MyTasks: React.FC = () => {
       password: activeTab === 'form_filling' ? (task as FormFillingTask).password : '',
     });
     setIsEditModalOpen(true);
+  };
+
+  const handleAmountChange = (field: 'amount' | 'deductionAmount', value: number) => {
+    const newData = { ...editFormData, [field]: value };
+    newData.revenue = newData.amount - newData.deductionAmount;
+    setEditFormData(newData);
   };
 
   const handleUpdateTask = () => {
@@ -116,6 +126,8 @@ const MyTasks: React.FC = () => {
         customerEmail: editFormData.customerEmail,
         description: editFormData.description,
         amount: editFormData.amount,
+        deductionAmount: editFormData.deductionAmount,
+        revenue: editFormData.revenue,
         paymentMode: editFormData.paymentMode,
         paymentStatus: editFormData.paymentStatus,
         serviceType: editFormData.serviceType,
@@ -129,6 +141,8 @@ const MyTasks: React.FC = () => {
         customerEmail: editFormData.customerEmail,
         description: editFormData.description,
         amount: editFormData.amount,
+        deductionAmount: editFormData.deductionAmount,
+        revenue: editFormData.revenue,
         paymentMode: editFormData.paymentMode,
         paymentStatus: editFormData.paymentStatus,
       });
@@ -233,7 +247,9 @@ const MyTasks: React.FC = () => {
                       <TableHead>Password</TableHead>
                     </>
                   )}
-                  <TableHead>Amount</TableHead>
+                  <TableHead>Total Amount</TableHead>
+                  <TableHead>Deduction</TableHead>
+                  <TableHead>Revenue</TableHead>
                   <TableHead>Description</TableHead>
                   {activeTab === 'form_filling' && <TableHead>Work Status</TableHead>}
                   <TableHead>Payment Mode</TableHead>
@@ -245,7 +261,7 @@ const MyTasks: React.FC = () => {
                 {paginatedTasks.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={activeTab === 'form_filling' ? 11 : 8}
+                      colSpan={activeTab === 'form_filling' ? 13 : 10}
                       className="text-center py-8 text-muted-foreground"
                     >
                       No tasks found
@@ -267,12 +283,14 @@ const MyTasks: React.FC = () => {
                           <TableCell className="capitalize">
                             {(task as FormFillingTask).serviceType.replace('_', ' ')}
                           </TableCell>
-                          <TableCell>{(task as FormFillingTask).applicationId}</TableCell>
-                          <TableCell>{(task as FormFillingTask).password}</TableCell>
+                          <TableCell>{(task as FormFillingTask).applicationId || '-'}</TableCell>
+                          <TableCell>{(task as FormFillingTask).password || '-'}</TableCell>
                         </>
                       )}
                       <TableCell>₹{task.amount}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{task.description}</TableCell>
+                      <TableCell>₹{task.deductionAmount || 0}</TableCell>
+                      <TableCell className="font-semibold text-primary">₹{task.revenue || task.amount}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{task.description || '-'}</TableCell>
                       {activeTab === 'form_filling' && (
                         <TableCell>
                           <Button
@@ -296,7 +314,7 @@ const MyTasks: React.FC = () => {
                           </Button>
                         </TableCell>
                       )}
-                      <TableCell className="capitalize">{task.paymentMode}</TableCell>
+                      <TableCell className="capitalize">{task.paymentMode || '-'}</TableCell>
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -363,14 +381,6 @@ const MyTasks: React.FC = () => {
                     onChange={(e) => setEditFormData({ ...editFormData, customerEmail: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Amount</Label>
-                  <Input
-                    type="number"
-                    value={editFormData.amount}
-                    onChange={(e) => setEditFormData({ ...editFormData, amount: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
               </div>
 
               {activeTab === 'form_filling' && (
@@ -417,17 +427,44 @@ const MyTasks: React.FC = () => {
                 />
               </div>
 
+              {/* Amount Section with Revenue Calculation */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Total Amount (₹)</Label>
+                  <Input
+                    type="number"
+                    value={editFormData.amount}
+                    onChange={(e) => handleAmountChange('amount', parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Deduction Amount (₹)</Label>
+                  <Input
+                    type="number"
+                    value={editFormData.deductionAmount}
+                    onChange={(e) => handleAmountChange('deductionAmount', parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Revenue (₹)</Label>
+                  <div className="h-10 px-3 py-2 rounded-md border border-input bg-muted flex items-center font-semibold text-primary">
+                    ₹{editFormData.revenue.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Payment Mode</Label>
                   <Select
-                    value={editFormData.paymentMode}
-                    onValueChange={(value) => setEditFormData({ ...editFormData, paymentMode: value as any })}
+                    value={editFormData.paymentMode || 'none'}
+                    onValueChange={(value) => setEditFormData({ ...editFormData, paymentMode: value === 'none' ? '' : value as any })}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border border-border z-50">
+                      <SelectItem value="none">Not Selected</SelectItem>
                       <SelectItem value="cash">Cash</SelectItem>
                       <SelectItem value="upi">UPI</SelectItem>
                       <SelectItem value="card">Card</SelectItem>
@@ -451,7 +488,7 @@ const MyTasks: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex gap-4 justify-end">
+              <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
                   Cancel
                 </Button>
@@ -474,8 +511,19 @@ const MyTasks: React.FC = () => {
             <p className="text-muted-foreground">
               Upload a screenshot to mark this task as completed.
             </p>
-            <Input type="file" accept="image/*" />
-            <div className="flex gap-4 justify-end">
+            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+              <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+              <p className="text-sm text-muted-foreground">
+                Click to upload or drag and drop
+              </p>
+              <input
+                type="file"
+                accept="image/*"
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                onChange={handleUploadScreenshot}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsUploadModalOpen(false)}>
                 Cancel
               </Button>
