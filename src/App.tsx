@@ -23,6 +23,7 @@ import MyTasks from "./pages/employee/MyTasks";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AssignWork from "./pages/admin/AssignWork";
 import Employees from "./pages/admin/Employees";
 import Customers from "./pages/admin/Customers";
 import AllTasks from "./pages/admin/AllTasks";
@@ -55,6 +56,7 @@ const App = () => (
                 <Route path="/admin" element={<AdminLayout />}>
                   <Route index element={<Navigate to="/admin/dashboard" replace />} />
                   <Route path="dashboard" element={<AdminDashboard />} />
+                  <Route path="assign-work" element={<AssignWork />} />
                   <Route path="employees" element={<Employees />} />
                   <Route path="customers" element={<Customers />} />
                   <Route path="all-tasks" element={<AllTasks />} />

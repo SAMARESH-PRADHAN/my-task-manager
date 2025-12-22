@@ -1,10 +1,11 @@
 import React from 'react';
 import { NavLink } from '@/components/NavLink';
-import { LayoutDashboard, Users, UserCheck, ListTodo, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Users, UserCheck, ListTodo, BarChart3, ClipboardPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { title: 'Dashboard', url: '/admin/dashboard', icon: LayoutDashboard },
+  { title: 'Assign Work', url: '/admin/assign-work', icon: ClipboardPlus },
   { title: 'Employees', url: '/admin/employees', icon: Users },
   { title: 'Customers', url: '/admin/customers', icon: UserCheck },
   { title: 'All Tasks', url: '/admin/all-tasks', icon: ListTodo },
