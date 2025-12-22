@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from '@/components/NavLink';
-import { LayoutDashboard, PlusCircle, ListTodo, Users, UserCheck, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, ListTodo, Users, UserCheck, BarChart3, ClipboardPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MobileNavProps {
@@ -15,8 +15,8 @@ const employeeItems = [
 
 const adminItems = [
   { title: 'Dashboard', url: '/admin/dashboard', icon: LayoutDashboard },
+  { title: 'Assign', url: '/admin/assign-work', icon: ClipboardPlus },
   { title: 'Employees', url: '/admin/employees', icon: Users },
-  { title: 'Customers', url: '/admin/customers', icon: UserCheck },
   { title: 'Tasks', url: '/admin/all-tasks', icon: ListTodo },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
 ];
