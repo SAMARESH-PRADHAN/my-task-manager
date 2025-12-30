@@ -1,0 +1,6 @@
+{
+  "watch": ["src"],
+  "ignore": ["wa_auth", "uploads"],
+  "ext": "js,json",
+  "exec": "node src/index.js"
+}
