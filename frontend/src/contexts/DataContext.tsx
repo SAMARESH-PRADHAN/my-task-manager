@@ -397,7 +397,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         deleteXeroxTask,
         addEmployee,
         updateEmployee, // ✅ ADD THIS EXACT LINE
-        getEmployeeTasks,
+        // getEmployeeTasks,
         getTodayStats,
       }}
     >
