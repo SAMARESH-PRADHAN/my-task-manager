@@ -169,7 +169,10 @@ const handleEmployeeLogin = async (e: React.FormEvent) => {
           <div className="mx-auto w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center shadow-lg">
             <span className="text-2xl font-bold text-primary-foreground">CC</span>
           </div>
-          <CardTitle className="text-3xl font-bold gradient-text">CafeConnect Pro</CardTitle>
+          <CardTitle className="text-3xl font-bold gradient-text">Cyber City</CardTitle>
+          <CardDescription className="text-muted-foreground font-bold">
+            Connecting People
+          </CardDescription>
           <CardDescription className="text-muted-foreground">
             Sign in to access your dashboard
           </CardDescription>

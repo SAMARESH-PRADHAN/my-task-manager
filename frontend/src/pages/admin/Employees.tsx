@@ -1,29 +1,43 @@
-import React, { useState } from 'react';
-import { Plus, MoreVertical, Edit, Eye, Download, FileText, Clock, IndianRupee } from 'lucide-react';
-import { useData, Employee, FormFillingTask, XeroxTask } from '@/contexts/DataContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { useState } from "react";
+import {
+  Plus,
+  MoreVertical,
+  Edit,
+  Eye,
+  Download,
+  FileText,
+  Clock,
+  IndianRupee,
+} from "lucide-react";
+import {
+  useData,
+  Employee,
+  FormFillingTask,
+  XeroxTask,
+} from "@/contexts/DataContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -31,30 +45,36 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import DateFilter from '@/components/layout/shared/DateFilter';
-import Pagination from '@/components/layout/shared/Pagination';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { toast } from 'sonner';
-import { downloadExcel } from '@/utils/excel';
-import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+} from "@/components/ui/table";
+import DateFilter from "@/components/layout/shared/DateFilter";
+import Pagination from "@/components/layout/shared/Pagination";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { toast } from "sonner";
+import { downloadExcel } from "@/utils/excel";
+import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 
 const ITEMS_PER_PAGE = 6;
 
 const Employees: React.FC = () => {
-  const { employees, formFillingTasks, xeroxTasks, addEmployee, updateEmployee } = useData();
+  const {
+    employees,
+    formFillingTasks,
+    xeroxTasks,
+    addEmployee,
+    updateEmployee,
+  } = useData();
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   // Add employee modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    password: '',
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    password: "",
   });
 
   // Edit employee modal
@@ -66,7 +86,9 @@ const Employees: React.FC = () => {
   const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
   const [taskFromDate, setTaskFromDate] = useState<Date | undefined>();
   const [taskToDate, setTaskToDate] = useState<Date | undefined>();
-  const [taskServiceType, setTaskServiceType] = useState<'all' | 'form_filling' | 'xerox'>('all');
+  const [taskServiceType, setTaskServiceType] = useState<
+    "all" | "form_filling" | "xerox"
+  >("all");
   const [taskPage, setTaskPage] = useState(1);
 
   const filteredEmployees = employees.filter(
@@ -84,36 +106,52 @@ const Employees: React.FC = () => {
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
+      .split(" ")
       .map((n) => n[0])
-      .join('')
+      .join("")
       .toUpperCase();
   };
 
   // Get employee stats
   const getEmployeeStats = (employeeId: string) => {
-    const empFormFilling = formFillingTasks.filter((t) => t.employeeId === employeeId);
+    const empFormFilling = formFillingTasks.filter(
+      (t) => t.employeeId === employeeId
+    );
     const empXerox = xeroxTasks.filter((t) => t.employeeId === employeeId);
-    
+
     const totalTasks = empFormFilling.length + empXerox.length;
-    const pendingTasks = empFormFilling.filter((t) => t.workStatus === 'pending' || t.paymentStatus === 'pending').length 
-      + empXerox.filter((t) => t.paymentStatus === 'pending').length;
-    const totalRevenue = empFormFilling.reduce((sum, t) => sum + t.amount, 0) 
-      + empXerox.reduce((sum, t) => sum + t.amount, 0);
+    const pendingTasks =
+      empFormFilling.filter(
+        (t) => t.workStatus === "pending" || t.paymentStatus === "pending"
+      ).length + empXerox.filter((t) => t.paymentStatus === "pending").length;
+    const totalRevenue =
+      empFormFilling.reduce((sum, t) => sum + t.amount, 0) +
+      empXerox.reduce((sum, t) => sum + t.amount, 0);
 
     return { totalTasks, pendingTasks, totalRevenue };
   };
 
   const handleAddEmployee = () => {
-    if (!newEmployee.name || !newEmployee.email || !newEmployee.phone || !newEmployee.password) {
-      toast.error('Please fill all required fields');
+    if (
+      !newEmployee.name ||
+      !newEmployee.email ||
+      !newEmployee.phone ||
+      !newEmployee.password
+    ) {
+      toast.error("Please fill all required fields");
       return;
     }
 
     addEmployee(newEmployee);
-    toast.success('Employee added successfully!');
+    toast.success("Employee added successfully!");
     setIsAddModalOpen(false);
-    setNewEmployee({ name: '', email: '', phone: '', address: '', password: '' });
+    setNewEmployee({
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      password: "",
+    });
   };
 
   const handleEditEmployee = () => {
@@ -126,13 +164,15 @@ const Employees: React.FC = () => {
       address: editingEmployee.address,
       password: editingEmployee.password,
     });
-    toast.success('Employee updated successfully!');
+    toast.success("Employee updated successfully!");
     setIsEditModalOpen(false);
     setEditingEmployee(null);
   };
 
   const getEmployeeTasks = (employeeId: string) => {
-    let formFilling = formFillingTasks.filter((t) => t.employeeId === employeeId);
+    let formFilling = formFillingTasks.filter(
+      (t) => t.employeeId === employeeId
+    );
     let xerox = xeroxTasks.filter((t) => t.employeeId === employeeId);
 
     // Apply date filter
@@ -151,8 +191,8 @@ const Employees: React.FC = () => {
       );
     }
 
-    if (taskServiceType === 'form_filling') return { formFilling, xerox: [] };
-    if (taskServiceType === 'xerox') return { formFilling: [], xerox };
+    if (taskServiceType === "form_filling") return { formFilling, xerox: [] };
+    if (taskServiceType === "xerox") return { formFilling: [], xerox };
     return { formFilling, xerox };
   };
 
@@ -160,31 +200,63 @@ const Employees: React.FC = () => {
     if (!viewingEmployee) return;
 
     const tasks = getEmployeeTasks(viewingEmployee.id);
-    const allTasks = [
+    // const allTasks = [
+    //   ...tasks.formFilling.map((t) => ({
+    //     'Serial No': t.id,
+    //     'Customer Name': t.customerName,
+    //     'Phone': t.customerPhone,
+    //     'Service Type': t.serviceType,
+    //     'Amount': t.amount,
+    //     'Work Status': t.workStatus,
+    //     'Payment Status': t.paymentStatus,
+    //     'Date': format(new Date(t.createdAt), 'dd/MM/yyyy HH:mm'),
+    //   })),
+    //   ...tasks.xerox.map((t) => ({
+    //     'Serial No': t.id,
+    //     'Customer Name': t.customerName,
+    //     'Phone': t.customerPhone,
+    //     'Service Type': 'Xerox/Other',
+    //     'Amount': t.amount,
+    //     'Work Status': 'N/A',
+    //     'Payment Status': t.paymentStatus,
+    //     'Date': format(new Date(t.createdAt), 'dd/MM/yyyy HH:mm'),
+    //   })),
+    // ];
+    const mergedTasks = [
       ...tasks.formFilling.map((t) => ({
-        'Serial No': t.id,
-        'Customer Name': t.customerName,
-        'Phone': t.customerPhone,
-        'Service Type': t.serviceType,
-        'Amount': t.amount,
-        'Work Status': t.workStatus,
-        'Payment Status': t.paymentStatus,
-        'Date': format(new Date(t.createdAt), 'dd/MM/yyyy HH:mm'),
+        customerName: t.customerName,
+        customerPhone: t.customerPhone,
+        serviceType: t.serviceType,
+        amount: t.amount,
+        workStatus: t.workStatus,
+        paymentStatus: t.paymentStatus,
+        createdAt: t.createdAt,
       })),
       ...tasks.xerox.map((t) => ({
-        'Serial No': t.id,
-        'Customer Name': t.customerName,
-        'Phone': t.customerPhone,
-        'Service Type': 'Xerox/Other',
-        'Amount': t.amount,
-        'Work Status': 'N/A',
-        'Payment Status': t.paymentStatus,
-        'Date': format(new Date(t.createdAt), 'dd/MM/yyyy HH:mm'),
+        customerName: t.customerName,
+        customerPhone: t.customerPhone,
+        serviceType: "Xerox/Other",
+        amount: t.amount,
+        workStatus: "N/A",
+        paymentStatus: t.paymentStatus,
+        createdAt: t.createdAt,
       })),
     ];
 
+    // 👉 Now add Serial No manually
+    const allTasks = mergedTasks.map((task, index) => ({
+      "Serial No": index + 1, // ✅ STARTS FROM 1
+      "Customer Name": task.customerName,
+      Phone: task.customerPhone,
+      "Service Type": task.serviceType,
+      Amount: task.amount,
+      "Work Status": task.workStatus,
+      "Payment Status": task.paymentStatus,
+      Date: format(new Date(task.createdAt), "dd/MM/yyyy HH:mm"),
+    }));
+
     downloadExcel(allTasks, `${viewingEmployee.name}_tasks`);
-    toast.success('Tasks exported successfully!');
+    toast.success("Tasks exported successfully!");
   };
 
   return (
@@ -227,9 +299,15 @@ const Employees: React.FC = () => {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="font-semibold text-lg text-foreground">{employee.name}</h3>
-                      <p className="text-sm text-muted-foreground">{employee.email}</p>
-                      <p className="text-sm text-muted-foreground">{employee.phone}</p>
+                      <h3 className="font-semibold text-lg text-foreground">
+                        {employee.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {employee.email}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {employee.phone}
+                      </p>
                     </div>
                   </div>
                   <DropdownMenu>
@@ -238,7 +316,10 @@ const Employees: React.FC = () => {
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="bg-popover border border-border z-50" align="end">
+                    <DropdownMenuContent
+                      className="bg-popover border border-border z-50"
+                      align="end"
+                    >
                       <DropdownMenuItem
                         onClick={() => {
                           setEditingEmployee(employee);
@@ -260,28 +341,42 @@ const Employees: React.FC = () => {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                
+
                 {/* Employee Stats */}
                 <div className="mt-4 pt-4 border-t border-border grid grid-cols-3 gap-2">
                   <div className="flex flex-col items-center p-2 bg-muted/50 rounded-lg">
                     <FileText className="h-4 w-4 text-primary mb-1" />
-                    <span className="text-lg font-bold text-foreground">{stats.totalTasks}</span>
-                    <span className="text-xs text-muted-foreground">Total Tasks</span>
+                    <span className="text-lg font-bold text-foreground">
+                      {stats.totalTasks}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Total Tasks
+                    </span>
                   </div>
                   <div className="flex flex-col items-center p-2 bg-muted/50 rounded-lg">
                     <Clock className="h-4 w-4 text-warning mb-1" />
-                    <span className="text-lg font-bold text-foreground">{stats.pendingTasks}</span>
-                    <span className="text-xs text-muted-foreground">Pending</span>
+                    <span className="text-lg font-bold text-foreground">
+                      {stats.pendingTasks}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Pending
+                    </span>
                   </div>
                   <div className="flex flex-col items-center p-2 bg-muted/50 rounded-lg">
                     <IndianRupee className="h-4 w-4 text-success mb-1" />
-                    <span className="text-lg font-bold text-foreground">₹{stats.totalRevenue}</span>
-                    <span className="text-xs text-muted-foreground">Revenue</span>
+                    <span className="text-lg font-bold text-foreground">
+                      ₹{stats.totalRevenue}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Revenue
+                    </span>
                   </div>
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-border">
-                  <p className="text-sm text-muted-foreground">{employee.address}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {employee.address}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -306,7 +401,9 @@ const Employees: React.FC = () => {
               <Label>Name *</Label>
               <Input
                 value={newEmployee.name}
-                onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
+                onChange={(e) =>
+                  setNewEmployee({ ...newEmployee, name: e.target.value })
+                }
                 placeholder="Enter name"
               />
             </div>
@@ -315,7 +412,9 @@ const Employees: React.FC = () => {
               <Input
                 type="email"
                 value={newEmployee.email}
-                onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
+                onChange={(e) =>
+                  setNewEmployee({ ...newEmployee, email: e.target.value })
+                }
                 placeholder="Enter email"
               />
             </div>
@@ -323,7 +422,9 @@ const Employees: React.FC = () => {
               <Label>Phone Number *</Label>
               <Input
                 value={newEmployee.phone}
-                onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
+                onChange={(e) =>
+                  setNewEmployee({ ...newEmployee, phone: e.target.value })
+                }
                 placeholder="Enter phone number"
               />
             </div>
@@ -331,7 +432,9 @@ const Employees: React.FC = () => {
               <Label>Address</Label>
               <Input
                 value={newEmployee.address}
-                onChange={(e) => setNewEmployee({ ...newEmployee, address: e.target.value })}
+                onChange={(e) =>
+                  setNewEmployee({ ...newEmployee, address: e.target.value })
+                }
                 placeholder="Enter address"
               />
             </div>
@@ -340,15 +443,23 @@ const Employees: React.FC = () => {
               <Input
                 type="password"
                 value={newEmployee.password}
-                onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
+                onChange={(e) =>
+                  setNewEmployee({ ...newEmployee, password: e.target.value })
+                }
                 placeholder="Enter password"
               />
             </div>
             <div className="flex gap-4 justify-end">
-              <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsAddModalOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleAddEmployee} className="gradient-primary text-primary-foreground">
+              <Button
+                onClick={handleAddEmployee}
+                className="gradient-primary text-primary-foreground"
+              >
                 Add Employee
               </Button>
             </div>
@@ -369,7 +480,10 @@ const Employees: React.FC = () => {
                 <Input
                   value={editingEmployee.name}
                   onChange={(e) =>
-                    setEditingEmployee({ ...editingEmployee, name: e.target.value })
+                    setEditingEmployee({
+                      ...editingEmployee,
+                      name: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -379,7 +493,10 @@ const Employees: React.FC = () => {
                   type="email"
                   value={editingEmployee.email}
                   onChange={(e) =>
-                    setEditingEmployee({ ...editingEmployee, email: e.target.value })
+                    setEditingEmployee({
+                      ...editingEmployee,
+                      email: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -388,7 +505,10 @@ const Employees: React.FC = () => {
                 <Input
                   value={editingEmployee.phone}
                   onChange={(e) =>
-                    setEditingEmployee({ ...editingEmployee, phone: e.target.value })
+                    setEditingEmployee({
+                      ...editingEmployee,
+                      phone: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -397,7 +517,10 @@ const Employees: React.FC = () => {
                 <Input
                   value={editingEmployee.address}
                   onChange={(e) =>
-                    setEditingEmployee({ ...editingEmployee, address: e.target.value })
+                    setEditingEmployee({
+                      ...editingEmployee,
+                      address: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -407,15 +530,24 @@ const Employees: React.FC = () => {
                   type="password"
                   value={editingEmployee.password}
                   onChange={(e) =>
-                    setEditingEmployee({ ...editingEmployee, password: e.target.value })
+                    setEditingEmployee({
+                      ...editingEmployee,
+                      password: e.target.value,
+                    })
                   }
                 />
               </div>
               <div className="flex gap-4 justify-end">
-                <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditModalOpen(false)}
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleEditEmployee} className="gradient-primary text-primary-foreground">
+                <Button
+                  onClick={handleEditEmployee}
+                  className="gradient-primary text-primary-foreground"
+                >
                   Update
                 </Button>
               </div>
@@ -425,7 +557,10 @@ const Employees: React.FC = () => {
       </Dialog>
 
       {/* View Tasks Modal */}
-      <Dialog open={isViewTasksModalOpen} onOpenChange={setIsViewTasksModalOpen}>
+      <Dialog
+        open={isViewTasksModalOpen}
+        onOpenChange={setIsViewTasksModalOpen}
+      >
         <DialogContent className="bg-card border border-border max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{viewingEmployee?.name}'s Tasks</DialogTitle>
@@ -466,7 +601,7 @@ const Employees: React.FC = () => {
                       <TableHead>Customer</TableHead>
                       <TableHead>Service</TableHead>
                       <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Payment Status</TableHead>
                       <TableHead>Date</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -474,14 +609,27 @@ const Employees: React.FC = () => {
                     {(() => {
                       const tasks = getEmployeeTasks(viewingEmployee.id);
                       const allTasks = [
-                        ...tasks.formFilling.map((t) => ({ ...t, type: 'form_filling' as const })),
-                        ...tasks.xerox.map((t) => ({ ...t, type: 'xerox' as const })),
-                      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                        ...tasks.formFilling.map((t) => ({
+                          ...t,
+                          type: "form_filling" as const,
+                        })),
+                        ...tasks.xerox.map((t) => ({
+                          ...t,
+                          type: "xerox" as const,
+                        })),
+                      ].sort(
+                        (a, b) =>
+                          new Date(b.createdAt).getTime() -
+                          new Date(a.createdAt).getTime()
+                      );
 
                       if (allTasks.length === 0) {
                         return (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            <TableCell
+                              colSpan={6}
+                              className="text-center py-8 text-muted-foreground"
+                            >
                               No tasks found
                             </TableCell>
                           </TableRow>
@@ -493,24 +641,30 @@ const Employees: React.FC = () => {
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>{task.customerName}</TableCell>
                           <TableCell className="capitalize">
-                            {task.type === 'form_filling'
-                              ? (task as FormFillingTask).serviceType.replace('_', ' ')
-                              : 'Xerox/Other'}
+                            {task.type === "form_filling"
+                              ? (task as FormFillingTask).serviceType.replace(
+                                  "_",
+                                  " "
+                                )
+                              : "Xerox/Other"}
                           </TableCell>
                           <TableCell>₹{task.amount}</TableCell>
                           <TableCell>
                             <span
                               className={`px-2 py-1 rounded-full text-xs ${
-                                task.paymentStatus === 'completed'
-                                  ? 'bg-success/20 text-success'
-                                  : 'bg-warning/20 text-warning'
+                                task.paymentStatus === "completed"
+                                  ? "bg-success/20 text-success"
+                                  : "bg-warning/20 text-warning"
                               }`}
                             >
                               {task.paymentStatus}
                             </span>
                           </TableCell>
                           <TableCell>
-                            {format(new Date(task.createdAt), 'dd/MM/yyyy HH:mm')}
+                            {format(
+                              new Date(task.createdAt),
+                              "dd/MM/yyyy HH:mm"
+                            )}
                           </TableCell>
                         </TableRow>
                       ));

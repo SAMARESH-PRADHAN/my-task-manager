@@ -27,7 +27,7 @@ const Navbar: React.FC = () => {
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
       <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold gradient-text">CafeConnect Pro</h1>
+          <h1 className="text-xl font-bold gradient-text">Cyber City</h1>
         </div>
 
         <div className="flex items-center gap-4">

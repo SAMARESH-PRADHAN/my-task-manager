@@ -25,20 +25,32 @@ const Analytics: React.FC = () => {
   const { formFillingTasks, xeroxTasks, employees } = useData();
   const [timeRange, setTimeRange] = useState<TimeRange>('daily');
 
-  const getDateRange = () => {
-    const now = new Date();
-    switch (timeRange) {
-      case 'daily':
-        return { start: startOfDay(now), end: endOfDay(now) };
-      case 'weekly':
-        return { start: startOfWeek(now), end: endOfWeek(now) };
-      case 'monthly':
-        return { start: startOfMonth(now), end: endOfMonth(now) };
-    }
-  };
+  // const getDateRange = () => {
+  //   const now = new Date();
+  //   switch (timeRange) {
+  //     case 'daily':
+  //       return { start: startOfDay(now), end: endOfDay(now) };
+  //     case 'weekly':
+  //       return { start: startOfWeek(now), end: endOfWeek(now) };
+  //     case 'monthly':
+  //       return { start: startOfMonth(now), end: endOfMonth(now) };
+  //   }
+  // };
+  const dateRange = useMemo(() => {
+  const now = new Date();
+  switch (timeRange) {
+    case 'daily':
+      return { start: startOfDay(now), end: endOfDay(now) };
+    case 'weekly':
+      return { start: startOfWeek(now), end: endOfWeek(now) };
+    case 'monthly':
+      return { start: startOfMonth(now), end: endOfMonth(now) };
+  }
+}, [timeRange]);
+
 
   const filteredData = useMemo(() => {
-    const range = getDateRange();
+    const range = dateRange;
     
     const filteredFormFilling = formFillingTasks.filter((t) =>
       isWithinInterval(new Date(t.createdAt), range)
@@ -116,10 +128,10 @@ const Analytics: React.FC = () => {
         const dayStart = startOfDay(date);
         const dayEnd = endOfDay(date);
 
-        const dayFormFilling = formFillingTasks.filter((t) =>
+        const dayFormFilling = filteredData.formFilling.filter((t) =>
           isWithinInterval(new Date(t.createdAt), { start: dayStart, end: dayEnd })
         );
-        const dayXerox = xeroxTasks.filter((t) =>
+        const dayXerox = filteredData.xerox.filter((t) =>
           isWithinInterval(new Date(t.createdAt), { start: dayStart, end: dayEnd })
         );
 

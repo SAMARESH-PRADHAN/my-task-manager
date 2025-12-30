@@ -17,9 +17,14 @@ router.get("/", auth, async (_, res) => {
         c.name  AS customer_name,
         c.phone AS customer_phone,
         c.email AS customer_email,
-        c.type  AS customer_type
+        c.type  AS customer_type,
+
+         -- employee info ✅ FIX
+        e.name AS employee_name
+
       FROM tasks t
       LEFT JOIN customers c ON c.id = t.customer_id
+      LEFT JOIN users e ON e.id = t.employee_id
       ORDER BY t.created_at DESC
     `;
 
@@ -30,7 +35,6 @@ router.get("/", auth, async (_, res) => {
   }
 });
 
-
 /**
  * CREATE TASK
  */
@@ -38,16 +42,13 @@ router.post("/", auth, async (req, res) => {
   const t = req.body;
 
   // 🔐 STRICT TYPE SAFETY
-// 🔐 STRICT TYPE SAFETY
-const customerId = Number(t.customer_id);
+  // 🔐 STRICT TYPE SAFETY
+  const customerId = Number(t.customer_id);
 
-// ✅ ADMIN assigns → take from body
-// ✅ EMPLOYEE assigns → take from token
-const employeeId =
-  req.user.role === "admin"
-    ? Number(t.employee_id)
-    : req.user.id;
-
+  // ✅ ADMIN assigns → take from body
+  // ✅ EMPLOYEE assigns → take from token
+  const employeeId =
+    req.user.role === "admin" ? Number(t.employee_id) : req.user.id;
 
   if (!Number.isInteger(customerId) || !Number.isInteger(employeeId)) {
     return res.status(400).json({
@@ -180,6 +181,29 @@ router.put("/:id", auth, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+/**
+ * DELETE TASK
+ */
+router.delete("/:id", auth, async (req, res) => {
+  const taskId = Number(req.params.id);
+
+  if (!Number.isInteger(taskId)) {
+    return res.status(400).json({ message: "Invalid task id" });
+  }
+
+  try {
+    await sql`
+      DELETE FROM tasks
+      WHERE id = ${taskId}
+    `;
+
+    res.json({ message: "Task deleted successfully" });
+  } catch (err) {
+    console.error("DELETE TASK ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 /**
  * UPLOAD SCREENSHOT
  */
