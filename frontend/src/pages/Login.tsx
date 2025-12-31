@@ -247,8 +247,8 @@ const handleEmployeeLogin = async (e: React.FormEvent) => {
                 </Button>
 
                 <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-sm font-medium text-muted-foreground mb-2"></p>
-                  <p className="text-sm"></p>
+                  <p className="text-sm font-medium text-muted-foreground mb-2"> CRM Tool — Proprietary Software of Blackmoon Tech. @All rights reserved</p>
+                  <p className="text-sm">Delivered to Cyber City. Unauthorized external use or distribution is strictly prohibited.</p>
                 </div>
               </form>
             </TabsContent>
