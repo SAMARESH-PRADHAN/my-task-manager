@@ -92,9 +92,13 @@ interface DataContextType {
 
   addEmployee: (employee: Omit<Employee, "id" | "createdAt">) => Promise<void>;
 
-  // getEmployeeTasks: (
-  //   employeeId: string
-  // ) => { formFilling: FormFillingTask[]; xerox: XeroxTask[] };
+ getEmployeeTasks: (
+    employeeId: string
+  ) => {
+    formFilling: FormFillingTask[];
+    xerox: XeroxTask[];
+  };
+
 
   getTodayStats: () => {
     formFilling: number;
@@ -397,7 +401,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         deleteXeroxTask,
         addEmployee,
         updateEmployee, // ✅ ADD THIS EXACT LINE
-        // getEmployeeTasks,
+        getEmployeeTasks,
         getTodayStats,
       }}
     >
