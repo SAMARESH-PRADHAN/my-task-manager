@@ -41,7 +41,8 @@ import DateFilter from "@/components/layout/shared/DateFilter";
 import Pagination from "@/components/layout/shared/Pagination";
 import { toast } from "sonner";
 import { downloadExcel } from "@/utils/excel";
-import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { formatDateTimeIST } from "@/utils/dateUtils";
 import { useEffect } from "react";
 
 const ITEMS_PER_PAGE = 10;
@@ -170,7 +171,7 @@ const AllTasks: React.FC = () => {
         "Work Status": task.workStatus,
         "Payment Status": task.paymentStatus,
         Description: task.description,
-        Date: format(new Date(task.createdAt), "dd/MM/yyyy HH:mm"),
+        Date: formatDateTimeIST(task.createdAt),
       }));
       downloadExcel(data, "form_filling_tasks");
     } else {
@@ -184,7 +185,7 @@ const AllTasks: React.FC = () => {
         Revenue: task.revenue || task.amount,
         "Payment Status": task.paymentStatus,
         Description: task.description,
-        Date: format(new Date(task.createdAt), "dd/MM/yyyy HH:mm"),
+        Date: formatDateTimeIST(task.createdAt),
       }));
       downloadExcel(data, "xerox_tasks");
     }
@@ -419,14 +420,7 @@ const AllTasks: React.FC = () => {
                           {task.description || "-"}
                         </TableCell>
                         <TableCell>
-                          <div>
-                            <p>
-                              {format(new Date(task.createdAt), "dd/MM/yyyy")}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {format(new Date(task.createdAt), "HH:mm")}
-                            </p>
-                          </div>
+                          {formatDateTimeIST(task.createdAt)}
                         </TableCell>
                         <TableCell>
                           <Button
@@ -507,14 +501,7 @@ const AllTasks: React.FC = () => {
                           {task.description || "-"}
                         </TableCell>
                         <TableCell>
-                          <div>
-                            <p>
-                              {format(new Date(task.createdAt), "dd/MM/yyyy")}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {format(new Date(task.createdAt), "HH:mm")}
-                            </p>
-                          </div>
+                          {formatDateTimeIST(task.createdAt)}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">

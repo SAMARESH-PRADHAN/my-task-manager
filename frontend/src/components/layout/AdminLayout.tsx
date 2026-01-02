@@ -19,18 +19,23 @@ const AdminLayout: React.FC = () => {
     return <Navigate to="/employee/dashboard" replace />;
   }
 
-  return (
-    <div className="min-h-screen bg-background">
+ return (
+    <div className="h-screen flex flex-col bg-background">
+      {/* Navbar fixed */}
       <Navbar />
-      <div className="flex">
+
+      {/* Sidebar + Content */}
+      <div className="flex flex-1 overflow-hidden">
         <AdminSidebar />
-        <main className="flex-1 p-6 overflow-auto">
+
+        {/* ONLY this scrolls */}
+        <main className="flex-1 p-6 overflow-y-auto">
           <Outlet />
         </main>
       </div>
+
       <MobileNav role="admin" />
     </div>
   );
 };
-
 export default AdminLayout;

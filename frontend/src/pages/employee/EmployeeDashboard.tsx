@@ -8,9 +8,9 @@ import { format } from 'date-fns';
 
 const EmployeeDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { formFillingTasks, xeroxTasks, getEmployeeTasks, getTodayStats } = useData();
+  const { formFillingTasks, xeroxTasks, getEmployeeTasks, getTodayStats, getEmployeePendingCount  } = useData();
 
-  const employeeTasks = user ? getEmployeeTasks(user.id) : { formFilling: [], xerox: [] };
+  const employeeTasks = user ? getEmployeeTasks(String(user.id)) : { formFilling: [], xerox: [] };
   // const todayStats = getTodayStats();
 
   // Today's tasks for this employee
@@ -34,9 +34,9 @@ const EmployeeDashboard: React.FC = () => {
 
 
 // !2nd change here 
-  const pendingTasks =
-  todayFormFilling.filter(t => t.workStatus === 'pending').length +
-  todayXerox.filter(t => t.paymentStatus !== 'completed').length;
+  const pendingTasks = user
+  ? getEmployeePendingCount(String(user.id))
+  : 0;
 
 // !here
   return (
