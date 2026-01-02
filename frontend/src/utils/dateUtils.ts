@@ -1,13 +1,22 @@
-export function formatDateTimeIST(dateString: string) {
-  const date = new Date(dateString.endsWith("Z") ? dateString : dateString + "Z");
+import { format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 
-  return date.toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
+const IST_TIMEZONE = "Asia/Kolkata";
+
+/**
+ * Convert UTC date string to IST and format
+ */
+export const formatToIST = (
+  dateString: string,
+  pattern: string
+) => {
+  const zonedDate = toZonedTime(dateString, IST_TIMEZONE);
+  return format(zonedDate, pattern);
+};
+/**
+ * Convert UTC date string to IST date & time
+ * Used in tables & Excel export
+ */
+export const formatDateTimeIST = (dateString: string) => {
+  return formatToIST(dateString, "dd/MM/yyyy hh:mm a");
+};
