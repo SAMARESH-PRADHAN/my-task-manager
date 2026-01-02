@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Edit, Upload } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData, FormFillingTask, XeroxTask } from "@/contexts/DataContext";
@@ -31,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Pagination from "@/components/layout/shared/Pagination";
 import { toast } from "sonner";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -333,6 +334,23 @@ const MyTasks: React.FC = () => {
     }
   };
 
+  // Inside MyTasks component...
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollTable = (direction: "left" | "right") => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 400; // Pixels to move
+      const currentScroll = scrollContainerRef.current.scrollLeft;
+
+      scrollContainerRef.current.scrollTo({
+        left:
+          direction === "left"
+            ? currentScroll - scrollAmount
+            : currentScroll + scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
   return (
     <div className="space-y-6 pb-20 lg:pb-6">
       <div>
@@ -404,138 +422,160 @@ const MyTasks: React.FC = () => {
       </div>
 
       {/* Table */}
-      <Card className="shadow-card">
+      <Card className="shadow-card relative group">
+        {/* LEFT BUTTON - Constant Position */}
+        <div className="absolute left-2 top-1/2 -translate-y-1/2 z-30 invisible group-hover:visible">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-10 w-10 rounded-full shadow-xl border bg-background/95 hover:bg-background"
+            onClick={() => scrollTable("left")}
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </Button>
+        </div>
+
+        {/* RIGHT BUTTON - Constant Position */}
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-30 invisible group-hover:visible">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-10 w-10 rounded-full shadow-xl border bg-background/95 hover:bg-background"
+            onClick={() => scrollTable("right")}
+          >
+            <ChevronRight className="h-6 w-6" />
+          </Button>
+        </div>
+
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
+          {/* Pass the ref to the Table component */}
+          <Table ref={scrollContainerRef}>
+            <TableHeader>
+              <TableRow>
+                <TableHead>S.No</TableHead>
+                <TableHead>Customer Details</TableHead>
+                {activeTab === "form_filling" && (
+                  <>
+                    <TableHead>Service Type</TableHead>
+                    <TableHead>Application No.</TableHead>
+                    <TableHead>Password</TableHead>
+                  </>
+                )}
+                <TableHead>Total Amount</TableHead>
+                <TableHead>Deduction</TableHead>
+                <TableHead>Revenue</TableHead>
+                <TableHead>Description</TableHead>
+                {activeTab === "form_filling" && (
+                  <TableHead>Work Status</TableHead>
+                )}
+                <TableHead>Payment Mode</TableHead>
+                <TableHead>Payment Status</TableHead>
+                <TableHead>Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedTasks.length === 0 ? (
                 <TableRow>
-                  <TableHead>S.No</TableHead>
-                  <TableHead>Customer Details</TableHead>
-                  {activeTab === "form_filling" && (
-                    <>
-                      <TableHead>Service Type</TableHead>
-                      <TableHead>Application No.</TableHead>
-                      <TableHead>Password</TableHead>
-                    </>
-                  )}
-                  <TableHead>Total Amount</TableHead>
-                  <TableHead>Deduction</TableHead>
-                  <TableHead>Revenue</TableHead>
-                  <TableHead>Description</TableHead>
-                  {activeTab === "form_filling" && (
-                    <TableHead>Work Status</TableHead>
-                  )}
-                  <TableHead>Payment Mode</TableHead>
-                  <TableHead>Payment Status</TableHead>
-                  <TableHead>Action</TableHead>
+                  <TableCell
+                    colSpan={activeTab === "form_filling" ? 13 : 10}
+                    className="text-center py-8 text-muted-foreground"
+                  >
+                    No tasks found
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedTasks.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={activeTab === "form_filling" ? 13 : 10}
-                      className="text-center py-8 text-muted-foreground"
-                    >
-                      No tasks found
+              ) : (
+                paginatedTasks.map((task, index) => (
+                  <TableRow key={task.id}>
+                    <TableCell>
+                      {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                     </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedTasks.map((task, index) => (
-                    <TableRow key={task.id}>
-                      <TableCell>
-                        {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-semibold">{task.customerName}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {task.customerPhone}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {task.customerEmail}
-                          </p>
-                        </div>
-                      </TableCell>
-                      {activeTab === "form_filling" && (
-                        <>
-                          <TableCell className="capitalize">
-                            {(
-                              (task as FormFillingTask).serviceType ?? "-"
-                            ).replace("_", " ")}
-                          </TableCell>
-                          <TableCell>
-                            {(task as FormFillingTask).applicationId || "-"}
-                          </TableCell>
-                          <TableCell>
-                            {(task as FormFillingTask).password || "-"}
-                          </TableCell>
-                        </>
-                      )}
-                      <TableCell>₹{task.amount}</TableCell>
-                      <TableCell>₹{task.deductionAmount || 0}</TableCell>
-                      <TableCell className="font-semibold text-primary">
-                        ₹{task.revenue || task.amount}
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate">
-                        {task.description || "-"}
-                      </TableCell>
-                      {activeTab === "form_filling" && (
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className={
-                              (task as FormFillingTask).workStatus ===
-                              "completed"
-                                ? "bg-success/20 text-success hover:bg-success/30"
-                                : "bg-warning/20 text-warning hover:bg-warning/30"
-                            }
-                            onClick={() => {
-                              if (
-                                (task as FormFillingTask).workStatus ===
-                                "pending"
-                              ) {
-                                handleUploadClick(task as FormFillingTask);
-                              }
-                            }}
-                          >
-                            {(task as FormFillingTask).workStatus ===
-                              "pending" && <Upload className="h-4 w-4 mr-1" />}
-                            {(task as FormFillingTask).workStatus}
-                          </Button>
+                    <TableCell>
+                      <div>
+                        <p className="font-semibold">{task.customerName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {task.customerPhone}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {task.customerEmail}
+                        </p>
+                      </div>
+                    </TableCell>
+                    {activeTab === "form_filling" && (
+                      <>
+                        <TableCell className="capitalize">
+                          {(
+                            (task as FormFillingTask).serviceType ?? "-"
+                          ).replace("_", " ")}
                         </TableCell>
-                      )}
-                      <TableCell className="capitalize">
-                        {task.paymentMode || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            task.paymentStatus === "completed"
-                              ? "bg-success/20 text-success"
-                              : "bg-warning/20 text-warning"
-                          }`}
-                        >
-                          {task.paymentStatus}
-                        </span>
-                      </TableCell>
+                        <TableCell>
+                          {(task as FormFillingTask).applicationId || "-"}
+                        </TableCell>
+                        <TableCell>
+                          {(task as FormFillingTask).password || "-"}
+                        </TableCell>
+                      </>
+                    )}
+                    <TableCell>₹{task.amount}</TableCell>
+                    <TableCell>₹{task.deductionAmount || 0}</TableCell>
+                    <TableCell className="font-semibold text-primary">
+                      ₹{task.revenue || task.amount}
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate">
+                      {task.description || "-"}
+                    </TableCell>
+                    {activeTab === "form_filling" && (
                       <TableCell>
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => handleEditClick(task)}
+                          className={
+                            (task as FormFillingTask).workStatus === "completed"
+                              ? "bg-success/20 text-success hover:bg-success/30"
+                              : "bg-warning/20 text-warning hover:bg-warning/30"
+                          }
+                          onClick={() => {
+                            if (
+                              (task as FormFillingTask).workStatus === "pending"
+                            ) {
+                              handleUploadClick(task as FormFillingTask);
+                            }
+                          }}
                         >
-                          <Edit className="h-4 w-4" />
+                          {(task as FormFillingTask).workStatus ===
+                            "pending" && <Upload className="h-4 w-4 mr-1" />}
+                          {(task as FormFillingTask).workStatus}
                         </Button>
                       </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                    )}
+                    <TableCell className="capitalize">
+                      {task.paymentMode || "-"}
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          task.paymentStatus === "completed"
+                            ? "bg-success/20 text-success"
+                            : "bg-warning/20 text-warning"
+                        }`}
+                      >
+                        {task.paymentStatus}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEditClick(task)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+          
         </CardContent>
       </Card>
 

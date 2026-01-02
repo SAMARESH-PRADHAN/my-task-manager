@@ -2,10 +2,11 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
+const Table = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto">
-      <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
+    // We move the ref to the DIV so we can scroll it programmatically
+    <div ref={ref} className="relative w-full overflow-x-auto scroll-smooth">
+      <table className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   ),
 );
