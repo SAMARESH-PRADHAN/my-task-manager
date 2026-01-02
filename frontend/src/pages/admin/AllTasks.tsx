@@ -42,7 +42,7 @@ import Pagination from "@/components/layout/shared/Pagination";
 import { toast } from "sonner";
 import { downloadExcel } from "@/utils/excel";
 import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
-import { formatDateTimeIST } from "@/utils/dateUtils";
+import { formatDateTime } from "@/utils/dateUtils";
 import { useEffect } from "react";
 
 const ITEMS_PER_PAGE = 10;
@@ -171,7 +171,7 @@ const AllTasks: React.FC = () => {
         "Work Status": task.workStatus,
         "Payment Status": task.paymentStatus,
         Description: task.description,
-        Date: formatDateTimeIST(task.createdAt),
+        Date: formatDateTime(task.createdAt),
       }));
       downloadExcel(data, "form_filling_tasks");
     } else {
@@ -185,7 +185,7 @@ const AllTasks: React.FC = () => {
         Revenue: task.revenue || task.amount,
         "Payment Status": task.paymentStatus,
         Description: task.description,
-        Date: formatDateTimeIST(task.createdAt),
+        Date: formatDateTime(task.createdAt),
       }));
       downloadExcel(data, "xerox_tasks");
     }
@@ -420,7 +420,7 @@ const AllTasks: React.FC = () => {
                           {task.description || "-"}
                         </TableCell>
                         <TableCell>
-                          {formatDateTimeIST(task.createdAt)}
+                          {formatDateTime(task.createdAt)}
                         </TableCell>
                         <TableCell>
                           <Button
@@ -501,7 +501,7 @@ const AllTasks: React.FC = () => {
                           {task.description || "-"}
                         </TableCell>
                         <TableCell>
-                          {formatDateTimeIST(task.createdAt)}
+                          {formatDateTime(task.createdAt)}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">

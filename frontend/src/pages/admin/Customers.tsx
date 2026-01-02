@@ -25,7 +25,7 @@ import Pagination from "@/components/layout/shared/Pagination";
 import { toast } from "sonner";
 import { downloadExcel } from "@/utils/excel";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
-import { formatToIST } from "@/utils/dateUtils";
+import { formatDateTime } from "@/utils/dateUtils";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -103,7 +103,7 @@ const Customers: React.FC = () => {
       Contact: customer.phone,
       Email: customer.email,
       Type: customer.type.replace("_", " "),
-      "Created Date": formatToIST(customer.createdAt, 'dd/MM/yyyy HH:mm'),
+      "Created Date": formatDateTime(customer.createdAt),
     }));
 
     downloadExcel(data, `customers_${activeTab}`);
@@ -257,10 +257,7 @@ const Customers: React.FC = () => {
                       {/* ! to here  */}
                       <TableCell>
                         <div>
-                          <p>{formatToIST(customer.createdAt, "dd/MM/yyyy")}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatToIST(customer.createdAt, "HH:mm")}
-                          </p>
+                         {formatDateTime(customer.createdAt)}
                         </div>
                       </TableCell>
                     </TableRow>
