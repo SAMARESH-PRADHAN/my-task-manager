@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { Edit, Trash2, Download } from "lucide-react";
 import { useData, FormFillingTask, XeroxTask } from "@/contexts/DataContext";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,7 @@ import { downloadExcel } from "@/utils/excel";
 import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { formatToIST } from "@/utils/dateUtils";
 import { useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -247,6 +248,23 @@ const AllTasks: React.FC = () => {
     }
   };
 
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollTable = (direction: "left" | "right") => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 400; // Pixels to move
+      const currentScroll = scrollContainerRef.current.scrollLeft;
+
+      scrollContainerRef.current.scrollTo({
+        left:
+          direction === "left"
+            ? currentScroll - scrollAmount
+            : currentScroll + scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6 pb-20 lg:pb-6">
       <div>
@@ -332,11 +350,34 @@ const AllTasks: React.FC = () => {
       </div>
 
       {/* Table */}
-      <Card className="shadow-card">
+      <Card className="shadow-card relative group">
+        {/* LEFT BUTTON - Constant Position */}
+        <div className="absolute left-2 top-1/2 -translate-y-1/2 z-30 invisible group-hover:visible">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-10 w-10 rounded-full shadow-xl border bg-background/95 hover:bg-background"
+            onClick={() => scrollTable("left")}
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </Button>
+        </div>
+
+        {/* RIGHT BUTTON - Constant Position */}
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-30 invisible group-hover:visible">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-10 w-10 rounded-full shadow-xl border bg-background/95 hover:bg-background"
+            onClick={() => scrollTable("right")}
+          >
+            <ChevronRight className="h-6 w-6" />
+          </Button>
+        </div>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             {activeTab === "form_filling" ? (
-              <Table>
+              <Table ref={scrollContainerRef}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>S.No</TableHead>
