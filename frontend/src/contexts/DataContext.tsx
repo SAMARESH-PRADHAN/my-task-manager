@@ -16,7 +16,7 @@ export interface Customer {
   email: string;
   phone: string;
   type: "job_seeker" | "student" | "gov_scheme";
-  createdAt: Date;
+  createdAt: string;
 }
 
 export interface FormFillingTask {
@@ -39,7 +39,7 @@ export interface FormFillingTask {
   employeeId: string;
   employeeName: string;
   screenshotUrl?: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
 export interface XeroxTask {
@@ -56,7 +56,7 @@ export interface XeroxTask {
   paymentStatus: "pending" | "completed";
   employeeId: string;
   employeeName: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
 export interface Employee {
@@ -66,7 +66,7 @@ export interface Employee {
   phone: string;
   address: string;
   password: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
 /* =========================
@@ -92,13 +92,11 @@ interface DataContextType {
 
   addEmployee: (employee: Omit<Employee, "id" | "createdAt">) => Promise<void>;
 
- getEmployeeTasks: (
-    employeeId: string
-  ) => {
+  getEmployeeTasks: (employeeId: string) => {
     formFilling: FormFillingTask[];
     xerox: XeroxTask[];
   };
-
+  getEmployeePendingCount: (employeeId: string) => number;
 
   getTodayStats: () => {
     formFilling: number;
@@ -138,7 +136,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           phone: e.phone,
           address: e.address,
           password: "",
-          createdAt: new Date(e.created_at),
+          createdAt: e.created_at,
         }))
     );
   };
@@ -169,40 +167,46 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     const xx: XeroxTask[] = [];
 
     res.data.forEach((t: any) => {
-      const base = {
-        id: String(t.id),
-        customerId: String(t.customer_id),
-
-        customerName: t.customer_name ?? "—",
-        customerEmail: t.customer_email ?? "—",
-        customerPhone: t.customer_phone ?? "—",
-
-        amount: Number(t.total_amount ?? 0),
-        deductionAmount: Number(t.deduction_amount ?? 0),
-        revenue: Number(t.revenue ?? 0),
-
-        description: t.description ?? "",
-        paymentMode: t.payment_mode ?? "",
-        paymentStatus: t.payment_status,
-
-        employeeId: t.employee_id ? String(t.employee_id) : "",
-        employeeName: t.employee_name ?? "....",
-
-        createdAt: new Date(t.created_at),
-      };
-
       if (t.service_type === "form_filling") {
         ff.push({
-          ...base,
-          customerType: t.form_service_type ?? t.form_service_type ?? "unknown",
+          id: String(t.id),
+          customerId: String(t.customer_id),
+          customerName: t.customer_name ?? "—",
+          customerEmail: t.customer_email ?? "—",
+          customerPhone: t.customer_phone ?? "—",
+          customerType: t.form_service_type ?? "unknown",
           serviceType: t.form_service_type ?? "unknown",
           applicationId: t.application_id || "",
           password: t.application_password || "",
-          workStatus: t.work_status,
+          amount: Number(t.total_amount ?? 0),
+          deductionAmount: Number(t.deduction_amount ?? 0),
+          revenue: Number(t.revenue ?? 0),
+          workStatus: t.work_status ?? "pending",
+          paymentStatus: t.payment_status ?? "pending",
+          paymentMode: t.payment_mode ?? "",
+          description: t.description ?? "",
+          employeeId: t.employee_id ? String(t.employee_id) : "",
+          employeeName: t.employee_name ?? "....",
           screenshotUrl: t.screenshot_url,
+          createdAt: t.created_at, // Keep as string if your interface uses string
         });
-      } else {
-        xx.push(base as XeroxTask);
+      } else if (t.service_type === "xerox") {
+        xx.push({
+          id: String(t.id),
+          customerId: String(t.customer_id),
+          customerName: t.customer_name ?? "—",
+          customerEmail: t.customer_email ?? "—",
+          customerPhone: t.customer_phone ?? "—",
+          amount: Number(t.total_amount ?? 0),
+          deductionAmount: Number(t.deduction_amount ?? 0),
+          revenue: Number(t.revenue ?? 0),
+          paymentStatus: t.payment_status ?? "pending",
+          paymentMode: t.payment_mode ?? "",
+          description: t.description ?? "",
+          employeeId: t.employee_id ? String(t.employee_id) : "",
+          employeeName: t.employee_name ?? "....",
+          createdAt: t.created_at, // Keep as string if your interface uses string
+        });
       }
     });
 
@@ -222,7 +226,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       email: c.email,
       phone: c.phone,
       type: c.type,
-      createdAt: new Date(c.created_at),
+      createdAt: c.created_at,
     }));
 
     setCustomers(list);
@@ -240,7 +244,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       email: res.data.email,
       phone: res.data.phone,
       type: res.data.type,
-      createdAt: new Date(res.data.created_at),
+      createdAt: res.data.created_at,
     };
 
     setCustomers((p) => [...p, newCustomer]);
@@ -373,6 +377,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     ),
   });
 
+  const getEmployeePendingCount = (employeeId: string) => {
+    const formPending = formFillingTasks.filter(
+      (t) =>
+        String(t.employeeId) === String(employeeId) &&
+        t.workStatus === "pending"
+    ).length;
+
+    // const xeroxPending = xeroxTasks.filter(
+    //   (t) =>
+    //     String(t.employeeId) === String(employeeId) &&
+    //     t.paymentStatus !== "completed"
+    // ).length;
+
+    return formPending;
+  };
+
   // ! changes here
   const getTodayStats = () => {
     const revenue =
@@ -402,6 +422,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         addEmployee,
         updateEmployee, // ✅ ADD THIS EXACT LINE
         getEmployeeTasks,
+        getEmployeePendingCount,
         getTodayStats,
       }}
     >

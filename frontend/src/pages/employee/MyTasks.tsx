@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Edit, Upload } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useData, FormFillingTask, XeroxTask } from '@/contexts/DataContext';
-import { api } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { useState, useMemo, useEffect } from "react";
+import { Edit, Upload } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useData, FormFillingTask, XeroxTask } from "@/contexts/DataContext";
+import { api } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -13,114 +13,123 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import Pagination from '@/components/layout/shared/Pagination';
-import { toast } from 'sonner';
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import Pagination from "@/components/layout/shared/Pagination";
+import { toast } from "sonner";
 
 const ITEMS_PER_PAGE = 10;
 
 const MyTasks: React.FC = () => {
   const { user } = useAuth();
-  const { updateFormFillingTask, updateXeroxTask } = useData(); // ✅ getEmployeeTasks removed
+  //  const { updateXeroxTask } = useData(); // ✅ getEmployeeTasks removed
 
-  const [activeTab, setActiveTab] = useState<'form_filling' | 'xerox'>('form_filling');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [activeTab, setActiveTab] = useState<"form_filling" | "xerox">(
+    "form_filling"
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "pending" | "completed"
+  >("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   // Edit modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<FormFillingTask | XeroxTask | null>(null);
+  const [editingTask, setEditingTask] = useState<
+    FormFillingTask | XeroxTask | null
+  >(null);
   const [editFormData, setEditFormData] = useState({
-    customerName: '',
-    customerPhone: '',
-    customerEmail: '',
-    description: '',
+    customerName: "",
+    customerPhone: "",
+    customerEmail: "",
+    description: "",
     amount: 0,
     deductionAmount: 0,
     revenue: 0,
-    paymentMode: 'cash' as 'cash' | 'upi' | 'card' | '',
-    paymentStatus: 'pending' as 'pending' | 'completed',
-    serviceType: 'job_seeker' as 'job_seeker' | 'student' | 'gov_scheme',
-    applicationId: '',
-    password: '',
+    paymentMode: "cash" as "cash" | "upi" | "card" | "",
+    paymentStatus: "pending" as "pending" | "completed",
+    serviceType: "job_seeker" as "job_seeker" | "student" | "gov_scheme",
+    applicationId: "",
+    password: "",
   });
 
   // Screenshot upload modal
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [uploadingTask, setUploadingTask] = useState<FormFillingTask | null>(null);
+  const [uploadingTask, setUploadingTask] = useState<FormFillingTask | null>(
+    null
+  );
 
   // ✅ Backend task state
-  const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>([]);
+  const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>(
+    []
+  );
   const [xeroxTasks, setXeroxTasks] = useState<XeroxTask[]>([]);
 
   const fetchMyTasks = async () => {
-  try {
-    const res = await api.get('/tasks/my');
+    try {
+      const res = await api.get("/tasks/my");
 
-    const ff: FormFillingTask[] = [];
-    const xx: XeroxTask[] = [];
+      const ff: FormFillingTask[] = [];
+      const xx: XeroxTask[] = [];
 
-    res.data.forEach((t: any) => {
-      const base = {
-        id: String(t.id),
-        customerId: String(t.customer_id),
-        customerName: t.customer_name || '',
-        customerPhone: t.customer_phone || '',
-        customerEmail: t.customer_email || '',
-        amount: Number(t.total_amount || 0),
-        deductionAmount: Number(t.deduction_amount || 0),
-        revenue: Number(t.revenue || 0),
-        description: t.description || '',
-        paymentMode: t.payment_mode || '',
-        paymentStatus: t.payment_status,
-        createdAt: new Date(t.created_at),
-      };
+      res.data.forEach((t: any) => {
+        const base = {
+          id: String(t.id),
+          customerId: String(t.customer_id),
+          customerName: t.customer_name || "",
+          customerPhone: t.customer_phone || "",
+          customerEmail: t.customer_email || "",
+          amount: Number(t.total_amount || 0),
+          deductionAmount: Number(t.deduction_amount || 0),
+          revenue: Number(t.revenue || 0),
+          description: t.description || "",
+          paymentMode: t.payment_mode || "",
+          paymentStatus: t.payment_status,
+          createdAt: t.created_at,
+        };
 
-      if (t.service_type === 'form_filling') {
-        ff.push({
-          ...base,
-          customerType: t.customer_type || '',
-          employeeId: String(t.employee_id),
-          employeeName: user?.name || '',
-          serviceType: t.form_service_type,
-          applicationId: t.application_id || '',
-          password: t.application_password || '',
-          workStatus: t.work_status,
-        });
-      } else {
-        xx.push(base as XeroxTask);
-      }
-    });
+        if (t.service_type === "form_filling") {
+          ff.push({
+            ...base,
+            customerType: t.customer_type || "",
+            employeeId: String(t.employee_id),
+            employeeName: user?.name || "",
+            serviceType: t.form_service_type,
+            applicationId: t.application_id || "",
+            password: t.application_password || "",
+            workStatus: t.work_status,
+          });
+        } else {
+          xx.push(base as XeroxTask);
+        }
+      });
 
-    setFormFillingTasks(ff);
-    setXeroxTasks(xx);
-  } catch (err) {
-    console.error('FETCH MY TASKS ERROR', err);
-    toast.error('Failed to load tasks');
-  }
-};
-// useEffect(() => {
-//   console.log("USER IN MYTASKS:", user);
-//   if (!user) return;
-//   fetchMyTasks();
-// }, [user]);
-
+      setFormFillingTasks(ff);
+      setXeroxTasks(xx);
+    } catch (err) {
+      console.error("FETCH MY TASKS ERROR", err);
+      toast.error("Failed to load tasks");
+    }
+  };
+  // useEffect(() => {
+  //   console.log("USER IN MYTASKS:", user);
+  //   if (!user) return;
+  //   fetchMyTasks();
+  // }, [user]);
 
   // ✅ FETCH TASKS FROM BACKEND
   useEffect(() => {
@@ -128,7 +137,7 @@ const MyTasks: React.FC = () => {
 
     const fetchMyTasks = async () => {
       try {
-        const res = await api.get('/tasks/my');
+        const res = await api.get("/tasks/my");
 
         const ff: FormFillingTask[] = [];
         const xx: XeroxTask[] = [];
@@ -137,33 +146,33 @@ const MyTasks: React.FC = () => {
           const base = {
             id: String(t.id),
             customerId: String(t.customer_id),
-            customerName: t.customer_name || '',
-            customerPhone: t.customer_phone || '',
-            customerEmail: t.customer_email || '',
+            customerName: t.customer_name || "",
+            customerPhone: t.customer_phone || "",
+            customerEmail: t.customer_email || "",
             amount: Number(t.total_amount || 0),
             deductionAmount: Number(t.deduction_amount || 0),
             revenue: Number(t.revenue || 0),
-            description: t.description || '',
-            paymentMode: t.payment_mode || '',
+            description: t.description || "",
+            paymentMode: t.payment_mode || "",
             paymentStatus: t.payment_status,
-            createdAt: new Date(t.created_at),
+            createdAt: t.created_at,
           };
 
-          if (t.service_type === 'form_filling') {
+          if (t.service_type === "form_filling") {
             ff.push({
-    ...base,
+              ...base,
 
-    // ✅ required by FormFillingTask
-    customerType: t.customer_type || '',
-    employeeId: String(t.employee_id),
-    employeeName: user?.name || '',
+              // ✅ required by FormFillingTask
+              customerType: t.customer_type || "",
+              employeeId: String(t.employee_id),
+              employeeName: user?.name || "",
 
-    // ✅ form filling specific
-    serviceType: t.form_service_type,
-    applicationId: t.application_id || '',
-    password: t.application_password || '',
-    workStatus: t.work_status,
-  });
+              // ✅ form filling specific
+              serviceType: t.form_service_type,
+              applicationId: t.application_id || "",
+              password: t.application_password || "",
+              workStatus: t.work_status,
+            });
           } else {
             xx.push(base as XeroxTask);
           }
@@ -172,8 +181,8 @@ const MyTasks: React.FC = () => {
         setFormFillingTasks(ff);
         setXeroxTasks(xx);
       } catch (err) {
-        console.error('FETCH MY TASKS ERROR', err);
-        toast.error('Failed to load tasks');
+        console.error("FETCH MY TASKS ERROR", err);
+        toast.error("Failed to load tasks");
       }
     };
 
@@ -188,7 +197,7 @@ const MyTasks: React.FC = () => {
 
   const filteredTasks = useMemo(() => {
     const tasks =
-      activeTab === 'form_filling'
+      activeTab === "form_filling"
         ? employeeTasks.formFilling
         : employeeTasks.xerox;
 
@@ -198,12 +207,11 @@ const MyTasks: React.FC = () => {
         task.customerPhone.includes(searchQuery);
 
       const status =
-        activeTab === 'form_filling'
+        activeTab === "form_filling"
           ? (task as FormFillingTask).workStatus
           : (task as XeroxTask).paymentStatus;
 
-      const matchesStatus =
-        statusFilter === 'all' || status === statusFilter;
+      const matchesStatus = statusFilter === "all" || status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
@@ -215,150 +223,152 @@ const MyTasks: React.FC = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
- const handleEditClick = (task: FormFillingTask | XeroxTask) => {
-  setEditingTask(task);
+  const handleEditClick = (task: FormFillingTask | XeroxTask) => {
+    setEditingTask(task);
 
-  setEditFormData({
-    customerName: task.customerName,
-    customerPhone: task.customerPhone,
-    customerEmail: task.customerEmail,
+    setEditFormData({
+      customerName: task.customerName,
+      customerPhone: task.customerPhone,
+      customerEmail: task.customerEmail,
 
-    description: task.description,
-    amount: task.amount,
-    deductionAmount: task.deductionAmount || 0,
-    revenue: task.revenue || task.amount,
+      description: task.description,
+      amount: task.amount,
+      deductionAmount: task.deductionAmount || 0,
+      revenue: task.revenue || task.amount,
 
-    paymentMode: task.paymentMode,
-    paymentStatus: task.paymentStatus,
+      paymentMode: task.paymentMode,
+      paymentStatus: task.paymentStatus,
 
-    serviceType:
-      activeTab === 'form_filling'
-        ? (task as FormFillingTask).serviceType
-        : 'job_seeker',
+      serviceType:
+        activeTab === "form_filling"
+          ? (task as FormFillingTask).serviceType
+          : "job_seeker",
 
-    applicationId:
-      activeTab === 'form_filling'
-        ? (task as FormFillingTask).applicationId ?? ''
-        : '',
+      applicationId:
+        activeTab === "form_filling"
+          ? (task as FormFillingTask).applicationId ?? ""
+          : "",
 
-    password:
-      activeTab === 'form_filling'
-        ? (task as FormFillingTask).password ?? ''
-        : '',
-  });
-
-  setIsEditModalOpen(true);
-};
-
-const handleAmountChange = (
-  field: 'amount' | 'deductionAmount',
-  value: number
-) => {
-  const newData = { ...editFormData, [field]: value };
-  newData.revenue = newData.amount - newData.deductionAmount;
-  setEditFormData(newData);
-};
-
-const handleUpdateTask = async () => {
-  if (!editingTask) return;
-
-  try {
-    await api.put(`/tasks/${editingTask.id}`, {
-      /* ================= TASK TABLE ================= */
-      description: editFormData.description,
-
-      total_amount: editFormData.amount,
-      deduction_amount: editFormData.deductionAmount,
-      revenue: editFormData.revenue,
-
-      payment_mode: editFormData.paymentMode,
-      payment_status: editFormData.paymentStatus,
-
-      form_service_type:
-        activeTab === 'form_filling'
-          ? editFormData.serviceType
-          : null,
-
-      application_id:
-        activeTab === 'form_filling'
-          ? editFormData.applicationId
-          : null,
-
-      application_password:
-        activeTab === 'form_filling'
-          ? editFormData.password
-          : null,
-
-      /* ================= CUSTOMER TABLE ================= */
-      customer_name: editFormData.customerName,
-      customer_phone: editFormData.customerPhone,
-      customer_email: editFormData.customerEmail,
+      password:
+        activeTab === "form_filling"
+          ? (task as FormFillingTask).password ?? ""
+          : "",
     });
 
-    toast.success('Task updated successfully!');
-    await fetchMyTasks();
+    setIsEditModalOpen(true);
+  };
 
-    setIsEditModalOpen(false);
-    setEditingTask(null);
-  } catch (err) {
-    console.error(err);
-    toast.error('Failed to update task');
-  }
-};
+  const handleAmountChange = (
+    field: "amount" | "deductionAmount",
+    value: number
+  ) => {
+    const newData = { ...editFormData, [field]: value };
+    newData.revenue = newData.amount - newData.deductionAmount;
+    setEditFormData(newData);
+  };
 
-const handleUploadClick = (task: FormFillingTask) => {
-  setUploadingTask(task);
-  setIsUploadModalOpen(true);
-};
+  const handleUpdateTask = async () => {
+    if (!editingTask) return;
 
-const handleUploadScreenshot = async () => {
-  if (!uploadingTask) return;
+    try {
+      await api.put(`/tasks/${editingTask.id}`, {
+        /* ================= TASK TABLE ================= */
+        description: editFormData.description,
 
-  try {
-    // ⚠️ This ONLY updates status (no real file upload)
-    await api.put(`/tasks/${uploadingTask.id}`, {
-      work_status: 'completed',
-    });
+        total_amount: editFormData.amount,
+        deduction_amount: editFormData.deductionAmount,
+        revenue: editFormData.revenue,
 
-    toast.success('Work marked as completed!');
-    await fetchMyTasks();
+        payment_mode: editFormData.paymentMode,
+        payment_status: editFormData.paymentStatus,
 
-    setIsUploadModalOpen(false);
-    setUploadingTask(null);
-  } catch (err) {
-    console.error(err);
-    toast.error('Failed to update work status');
-  }
-};
+        form_service_type:
+          activeTab === "form_filling" ? editFormData.serviceType : null,
 
+        application_id:
+          activeTab === "form_filling" ? editFormData.applicationId : null,
 
+        application_password:
+          activeTab === "form_filling" ? editFormData.password : null,
+
+        /* ================= CUSTOMER TABLE ================= */
+        customer_name: editFormData.customerName,
+        customer_phone: editFormData.customerPhone,
+        customer_email: editFormData.customerEmail,
+      });
+
+      toast.success("Task updated successfully!");
+      await fetchMyTasks();
+
+      setIsEditModalOpen(false);
+      setEditingTask(null);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update task");
+    }
+  };
+
+  const handleUploadClick = (task: FormFillingTask) => {
+    setUploadingTask(task);
+    setIsUploadModalOpen(true);
+  };
+
+  const handleUploadScreenshot = async () => {
+    if (!uploadingTask) return;
+
+    try {
+      // ⚠️ This ONLY updates status (no real file upload)
+      await api.put(`/tasks/${uploadingTask.id}`, {
+        work_status: "completed",
+      });
+
+      toast.success("Work marked as completed!");
+      await fetchMyTasks();
+
+      setIsUploadModalOpen(false);
+      setUploadingTask(null);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update work status");
+    }
+  };
 
   return (
     <div className="space-y-6 pb-20 lg:pb-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">My Tasks</h1>
-        <p className="text-muted-foreground">View and manage your assigned tasks</p>
+        <p className="text-muted-foreground">
+          View and manage your assigned tasks
+        </p>
       </div>
 
       {/* Tab Buttons */}
       <div className="flex gap-4">
         <Button
-          variant={activeTab === 'form_filling' ? 'default' : 'outline'}
+          variant={activeTab === "form_filling" ? "default" : "outline"}
           onClick={() => {
-            setActiveTab('form_filling');
+            setActiveTab("form_filling");
             setCurrentPage(1);
           }}
-          className={activeTab === 'form_filling' ? 'gradient-primary text-primary-foreground' : ''}
+          className={
+            activeTab === "form_filling"
+              ? "gradient-primary text-primary-foreground"
+              : ""
+          }
         >
           Form Filling
         </Button>
         <Button
-          variant={activeTab === 'xerox' ? 'default' : 'outline'}
+          variant={activeTab === "xerox" ? "default" : "outline"}
           onClick={() => {
-            setActiveTab('xerox');
+            setActiveTab("xerox");
             setCurrentPage(1);
           }}
-          className={activeTab === 'xerox' ? 'gradient-primary text-primary-foreground' : ''}
+          className={
+            activeTab === "xerox"
+              ? "gradient-primary text-primary-foreground"
+              : ""
+          }
         >
           Xerox/Printing/Passport Photo/Other Service
         </Button>
@@ -378,7 +388,7 @@ const handleUploadScreenshot = async () => {
         <Select
           value={statusFilter}
           onValueChange={(value) => {
-            setStatusFilter(value as 'all' | 'pending' | 'completed');
+            setStatusFilter(value as "all" | "pending" | "completed");
             setCurrentPage(1);
           }}
         >
@@ -402,7 +412,7 @@ const handleUploadScreenshot = async () => {
                 <TableRow>
                   <TableHead>S.No</TableHead>
                   <TableHead>Customer Details</TableHead>
-                  {activeTab === 'form_filling' && (
+                  {activeTab === "form_filling" && (
                     <>
                       <TableHead>Service Type</TableHead>
                       <TableHead>Application No.</TableHead>
@@ -413,7 +423,9 @@ const handleUploadScreenshot = async () => {
                   <TableHead>Deduction</TableHead>
                   <TableHead>Revenue</TableHead>
                   <TableHead>Description</TableHead>
-                  {activeTab === 'form_filling' && <TableHead>Work Status</TableHead>}
+                  {activeTab === "form_filling" && (
+                    <TableHead>Work Status</TableHead>
+                  )}
                   <TableHead>Payment Mode</TableHead>
                   <TableHead>Payment Status</TableHead>
                   <TableHead>Action</TableHead>
@@ -423,7 +435,7 @@ const handleUploadScreenshot = async () => {
                 {paginatedTasks.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={activeTab === 'form_filling' ? 13 : 10}
+                      colSpan={activeTab === "form_filling" ? 13 : 10}
                       className="text-center py-8 text-muted-foreground"
                     >
                       No tasks found
@@ -432,58 +444,78 @@ const handleUploadScreenshot = async () => {
                 ) : (
                   paginatedTasks.map((task, index) => (
                     <TableRow key={task.id}>
-                      <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
+                      <TableCell>
+                        {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-semibold">{task.customerName}</p>
-                          <p className="text-sm text-muted-foreground">{task.customerPhone}</p>
-                          <p className="text-sm text-muted-foreground">{task.customerEmail}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {task.customerPhone}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {task.customerEmail}
+                          </p>
                         </div>
                       </TableCell>
-                      {activeTab === 'form_filling' && (
+                      {activeTab === "form_filling" && (
                         <>
                           <TableCell className="capitalize">
-                            {((task as FormFillingTask).serviceType ?? '-').replace('_', ' ')}
-
+                            {(
+                              (task as FormFillingTask).serviceType ?? "-"
+                            ).replace("_", " ")}
                           </TableCell>
-                          <TableCell>{(task as FormFillingTask).applicationId || '-'}</TableCell>
-                          <TableCell>{(task as FormFillingTask).password || '-'}</TableCell>
+                          <TableCell>
+                            {(task as FormFillingTask).applicationId || "-"}
+                          </TableCell>
+                          <TableCell>
+                            {(task as FormFillingTask).password || "-"}
+                          </TableCell>
                         </>
                       )}
                       <TableCell>₹{task.amount}</TableCell>
                       <TableCell>₹{task.deductionAmount || 0}</TableCell>
-                      <TableCell className="font-semibold text-primary">₹{task.revenue || task.amount}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{task.description || '-'}</TableCell>
-                      {activeTab === 'form_filling' && (
+                      <TableCell className="font-semibold text-primary">
+                        ₹{task.revenue || task.amount}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate">
+                        {task.description || "-"}
+                      </TableCell>
+                      {activeTab === "form_filling" && (
                         <TableCell>
                           <Button
                             size="sm"
                             variant="ghost"
                             className={
-                              (task as FormFillingTask).workStatus === 'completed'
-                                ? 'bg-success/20 text-success hover:bg-success/30'
-                                : 'bg-warning/20 text-warning hover:bg-warning/30'
+                              (task as FormFillingTask).workStatus ===
+                              "completed"
+                                ? "bg-success/20 text-success hover:bg-success/30"
+                                : "bg-warning/20 text-warning hover:bg-warning/30"
                             }
                             onClick={() => {
-                              if ((task as FormFillingTask).workStatus === 'pending') {
+                              if (
+                                (task as FormFillingTask).workStatus ===
+                                "pending"
+                              ) {
                                 handleUploadClick(task as FormFillingTask);
                               }
                             }}
                           >
-                            {(task as FormFillingTask).workStatus === 'pending' && (
-                              <Upload className="h-4 w-4 mr-1" />
-                            )}
+                            {(task as FormFillingTask).workStatus ===
+                              "pending" && <Upload className="h-4 w-4 mr-1" />}
                             {(task as FormFillingTask).workStatus}
                           </Button>
                         </TableCell>
                       )}
-                      <TableCell className="capitalize">{task.paymentMode || '-'}</TableCell>
+                      <TableCell className="capitalize">
+                        {task.paymentMode || "-"}
+                      </TableCell>
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            task.paymentStatus === 'completed'
-                              ? 'bg-success/20 text-success'
-                              : 'bg-warning/20 text-warning'
+                            task.paymentStatus === "completed"
+                              ? "bg-success/20 text-success"
+                              : "bg-warning/20 text-warning"
                           }`}
                         >
                           {task.paymentStatus}
@@ -526,14 +558,24 @@ const handleUploadScreenshot = async () => {
                   <Label>Customer Name</Label>
                   <Input
                     value={editFormData.customerName}
-                    onChange={(e) => setEditFormData({ ...editFormData, customerName: e.target.value })}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        customerName: e.target.value,
+                      })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Phone Number</Label>
                   <Input
                     value={editFormData.customerPhone}
-                    onChange={(e) => setEditFormData({ ...editFormData, customerPhone: e.target.value })}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        customerPhone: e.target.value,
+                      })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -541,18 +583,28 @@ const handleUploadScreenshot = async () => {
                   <Input
                     type="email"
                     value={editFormData.customerEmail}
-                    onChange={(e) => setEditFormData({ ...editFormData, customerEmail: e.target.value })}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        customerEmail: e.target.value,
+                      })
+                    }
                   />
                 </div>
               </div>
 
-              {activeTab === 'form_filling' && (
+              {activeTab === "form_filling" && (
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
                     <Label>Service Type</Label>
                     <Select
                       value={editFormData.serviceType}
-                      onValueChange={(value) => setEditFormData({ ...editFormData, serviceType: value as any })}
+                      onValueChange={(value) =>
+                        setEditFormData({
+                          ...editFormData,
+                          serviceType: value as any,
+                        })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -568,14 +620,24 @@ const handleUploadScreenshot = async () => {
                     <Label>Application ID</Label>
                     <Input
                       value={editFormData.applicationId}
-                      onChange={(e) => setEditFormData({ ...editFormData, applicationId: e.target.value })}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          applicationId: e.target.value,
+                        })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Password</Label>
                     <Input
                       value={editFormData.password}
-                      onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          password: e.target.value,
+                        })
+                      }
                     />
                   </div>
                 </div>
@@ -585,7 +647,12 @@ const handleUploadScreenshot = async () => {
                 <Label>Description</Label>
                 <Textarea
                   value={editFormData.description}
-                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      description: e.target.value,
+                    })
+                  }
                   rows={3}
                 />
               </div>
@@ -597,7 +664,12 @@ const handleUploadScreenshot = async () => {
                   <Input
                     type="number"
                     value={editFormData.amount}
-                    onChange={(e) => handleAmountChange('amount', parseFloat(e.target.value) || 0)}
+                    onChange={(e) =>
+                      handleAmountChange(
+                        "amount",
+                        parseFloat(e.target.value) || 0
+                      )
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -605,7 +677,12 @@ const handleUploadScreenshot = async () => {
                   <Input
                     type="number"
                     value={editFormData.deductionAmount}
-                    onChange={(e) => handleAmountChange('deductionAmount', parseFloat(e.target.value) || 0)}
+                    onChange={(e) =>
+                      handleAmountChange(
+                        "deductionAmount",
+                        parseFloat(e.target.value) || 0
+                      )
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -620,8 +697,13 @@ const handleUploadScreenshot = async () => {
                 <div className="space-y-2">
                   <Label>Payment Mode</Label>
                   <Select
-                    value={editFormData.paymentMode || 'none'}
-                    onValueChange={(value) => setEditFormData({ ...editFormData, paymentMode: value === 'none' ? '' : value as any })}
+                    value={editFormData.paymentMode || "none"}
+                    onValueChange={(value) =>
+                      setEditFormData({
+                        ...editFormData,
+                        paymentMode: value === "none" ? "" : (value as any),
+                      })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -638,7 +720,12 @@ const handleUploadScreenshot = async () => {
                   <Label>Payment Status</Label>
                   <Select
                     value={editFormData.paymentStatus}
-                    onValueChange={(value) => setEditFormData({ ...editFormData, paymentStatus: value as any })}
+                    onValueChange={(value) =>
+                      setEditFormData({
+                        ...editFormData,
+                        paymentStatus: value as any,
+                      })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -652,10 +739,16 @@ const handleUploadScreenshot = async () => {
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditModalOpen(false)}
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleUpdateTask} className="gradient-primary text-primary-foreground">
+                <Button
+                  onClick={handleUpdateTask}
+                  className="gradient-primary text-primary-foreground"
+                >
                   Update
                 </Button>
               </div>
@@ -687,10 +780,16 @@ const handleUploadScreenshot = async () => {
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsUploadModalOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsUploadModalOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleUploadScreenshot} className="gradient-primary text-primary-foreground">
+              <Button
+                onClick={handleUploadScreenshot}
+                className="gradient-primary text-primary-foreground"
+              >
                 Upload & Complete
               </Button>
             </div>

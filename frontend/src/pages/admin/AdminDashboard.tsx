@@ -191,6 +191,16 @@ const AdminDashboard: React.FC = () => {
                     backgroundColor: "hsl(var(--popover))",
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "8px",
+                    color: "hsl(var(--foreground))",
+                    fontWeight: 500,
+                  }}
+                  labelStyle={{
+                    color: "hsl(var(--foreground))",
+                    fontWeight: 600,
+                  }}
+                  itemStyle={{
+                    color: "hsl(var(--success))", // 🟢 green number
+                    fontWeight: 600,
                   }}
                 />
                 <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
@@ -232,6 +242,16 @@ const AdminDashboard: React.FC = () => {
                       backgroundColor: "hsl(var(--popover))",
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "8px",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                      fontWeight: 400,
+                    }}
+                    itemStyle={{
+                      color: "hsl(var(--foreground))",
+                      fontWeight: 400,
+                    }}
+                    labelStyle={{
+                      color: "hsl(var(--foreground))",
+                      fontWeight: 600,
                     }}
                   />
                   <Legend />

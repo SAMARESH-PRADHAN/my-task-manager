@@ -19,16 +19,24 @@ const EmployeeLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="flex">
-        <EmployeeSidebar />
-        <main className="flex-1 p-6 overflow-auto">
-          <Outlet />
-        </main>
-      </div>
-      <MobileNav role="employee" />
-    </div>
+    <div className="h-screen bg-background flex flex-col">
+  {/* Navbar */}
+  <Navbar />
+
+  {/* Content area below navbar */}
+  <div className="flex flex-1 overflow-hidden">
+    {/* Sidebar */}
+    <EmployeeSidebar />
+
+    {/* Scrollable main content */}
+    <main className="flex-1 p-6 overflow-y-auto">
+      <Outlet />
+    </main>
+  </div>
+
+  <MobileNav role="employee" />
+</div>
+
   );
 };
 

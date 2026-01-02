@@ -1,51 +1,52 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useData } from '@/contexts/DataContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useData } from "@/contexts/DataContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { toast } from 'sonner';
+} from "@/components/ui/select";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 
-
-type ServiceType = 'form_filling' | 'xerox';
-type FormServiceType = 'job_seeker' | 'student' | 'gov_scheme';
-type PaymentMode = 'cash' | 'upi' | 'card';
+type ServiceType = "form_filling" | "xerox";
+type FormServiceType = "job_seeker" | "student" | "gov_scheme";
+type PaymentMode = "cash" | "upi" | "card";
 
 const AssignWork: React.FC = () => {
   const navigate = useNavigate();
   const { employees } = useData();
 
   // Employee selection
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
 
   // Customer details
-  const [customerName, setCustomerName] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
 
   // Service selection
-  const [serviceType, setServiceType] = useState<ServiceType | ''>('');
-  const [formServiceType, setFormServiceType] = useState<FormServiceType | ''>('');
+  const [serviceType, setServiceType] = useState<ServiceType | "">("");
+  const [formServiceType, setFormServiceType] = useState<FormServiceType | "">(
+    ""
+  );
 
   // Form filling specific (optional)
-  const [applicationId, setApplicationId] = useState('');
-  const [password, setPassword] = useState('');
+  const [applicationId, setApplicationId] = useState("");
+  const [password, setPassword] = useState("");
 
   // Common fields
-  const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
-  const [deductionAmount, setDeductionAmount] = useState('');
-  const [paymentMode, setPaymentMode] = useState<PaymentMode | ''>('');
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [deductionAmount, setDeductionAmount] = useState("");
+  const [paymentMode, setPaymentMode] = useState<PaymentMode | "">("");
 
   // Calculate revenue
   const revenue = useMemo(() => {
@@ -54,7 +55,9 @@ const AssignWork: React.FC = () => {
     return totalAmount - deduction;
   }, [amount, deductionAmount]);
 
-  const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
+  const selectedEmployee = employees.find(
+    (emp) => emp.id === selectedEmployeeId
+  );
 
   // const handleSubmit = (e: React.FormEvent) => {
   //   e.preventDefault();
@@ -125,56 +128,60 @@ const AssignWork: React.FC = () => {
   // };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!customerName || !customerPhone || !serviceType || !selectedEmployeeId) {
-    toast.error("Please fill all required fields");
-    return;
-  }
+    if (
+      !customerName ||
+      !customerPhone ||
+      !serviceType ||
+      !selectedEmployeeId
+    ) {
+      toast.error("Please fill all required fields");
+      return;
+    }
 
-  if (serviceType === "form_filling" && !formServiceType) {
-    toast.error("Please select form service type");
-    return;
-  }
+    if (serviceType === "form_filling" && !formServiceType) {
+      toast.error("Please select form service type");
+      return;
+    }
 
-  try {
-    // 1️⃣ CREATE CUSTOMER
-    const customerRes = await api.post("/customers", {
-      name: customerName,
-      email: customerEmail,
-      phone: customerPhone,
-      type: formServiceType || "job_seeker",
-    });
+    try {
+      // 1️⃣ CREATE CUSTOMER
+      const customerRes = await api.post("/customers", {
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone,
+        type: formServiceType || "job_seeker",
+      });
 
-    const customerId = customerRes.data.id;
+      const customerId = customerRes.data.id;
 
-    // 2️⃣ CREATE TASK
-    await api.post("/tasks", {
-      customer_id: customerId,
-      employee_id: selectedEmployeeId, // 🔥 CORE FIX
-      service_type: serviceType,
-      form_service_type:
-        serviceType === "form_filling" ? formServiceType : null,
-      application_id: applicationId || null,
-      application_password: password || null,
-      description,
-      total_amount: Number(amount) || 0,
-      deduction_amount: Number(deductionAmount) || 0,
-      revenue,
-      payment_mode: paymentMode || null,
-    });
+      // 2️⃣ CREATE TASK
+      await api.post("/tasks", {
+        customer_id: customerId,
+        employee_id: selectedEmployeeId, // 🔥 CORE FIX
+        service_type: serviceType,
+        form_service_type:
+          serviceType === "form_filling" ? formServiceType : null,
+        application_id: applicationId || null,
+        application_password: password || null,
+        description,
+        total_amount: Number(amount) || 0,
+        deduction_amount: Number(deductionAmount) || 0,
+        revenue,
+        payment_mode: paymentMode || null,
+      });
 
-    toast.success("Task assigned successfully!");
-    navigate("/admin/all-tasks");
-  } catch (err) {
-    console.error(err);
-    toast.error("Failed to assign task");
-  }
-};
-
+      toast.success("Task assigned successfully!");
+      navigate("/admin/all-tasks");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to assign task");
+    }
+  };
 
   const handleCancel = () => {
-    navigate('/admin/dashboard');
+    navigate("/admin/dashboard");
   };
 
   return (
@@ -234,8 +241,15 @@ const AssignWork: React.FC = () => {
                 <Input
                   id="customerPhone"
                   value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="Enter phone number"
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "");
+                    if (value.length <= 10) {
+                      setCustomerPhone(value);
+                    }
+                  }}
+                  placeholder="Enter 10-digit phone number"
+                  maxLength={10}
+                  inputMode="numeric"
                   required
                 />
               </div>
@@ -246,7 +260,7 @@ const AssignWork: React.FC = () => {
                 id="customerEmail"
                 type="email"
                 value={customerEmail}
-                onChange={(e) => setCustomerEmail(e.target.value)}
+                onChange={(e) => setCustomerEmail(e.target.value.toLowerCase())}
                 placeholder="Enter email address (optional)"
               />
             </div>
@@ -265,10 +279,10 @@ const AssignWork: React.FC = () => {
                 value={serviceType}
                 onValueChange={(value) => {
                   setServiceType(value as ServiceType);
-                  if (value !== 'form_filling') {
-                    setFormServiceType('');
-                    setApplicationId('');
-                    setPassword('');
+                  if (value !== "form_filling") {
+                    setFormServiceType("");
+                    setApplicationId("");
+                    setPassword("");
                   }
                 }}
               >
@@ -277,18 +291,22 @@ const AssignWork: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-popover border border-border z-50">
                   <SelectItem value="form_filling">Form Filling</SelectItem>
-                  <SelectItem value="xerox">Xerox/Printing/Passport Photo/Other Service</SelectItem>
+                  <SelectItem value="xerox">
+                    Xerox/Printing/Passport Photo/Other Service
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {serviceType === 'form_filling' && (
+            {serviceType === "form_filling" && (
               <>
                 <div className="space-y-2">
                   <Label>Form Service Type *</Label>
                   <Select
                     value={formServiceType}
-                    onValueChange={(value) => setFormServiceType(value as FormServiceType)}
+                    onValueChange={(value) =>
+                      setFormServiceType(value as FormServiceType)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select form service type" />
@@ -296,7 +314,9 @@ const AssignWork: React.FC = () => {
                     <SelectContent className="bg-popover border border-border z-50">
                       <SelectItem value="job_seeker">Job Seeker</SelectItem>
                       <SelectItem value="student">Student</SelectItem>
-                      <SelectItem value="gov_scheme">Government Scheme</SelectItem>
+                      <SelectItem value="gov_scheme">
+                        Government Scheme
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -346,8 +366,8 @@ const AssignWork: React.FC = () => {
               <Textarea
                 id="description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Enter work description (optional)"
+                onChange={(e) => setDescription(e.target.value.toUpperCase())}
+                placeholder="ENTER WORK DESCRIPTION"
                 rows={3}
               />
             </div>
@@ -361,8 +381,8 @@ const AssignWork: React.FC = () => {
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Enter total amount"
-                  min="0"
+                  className="appearance-none"
+                  inputMode="numeric"
                 />
               </div>
               <div className="space-y-2">
@@ -372,8 +392,8 @@ const AssignWork: React.FC = () => {
                   type="number"
                   value={deductionAmount}
                   onChange={(e) => setDeductionAmount(e.target.value)}
-                  placeholder="Enter deduction"
-                  min="0"
+                  className="appearance-none"
+                  inputMode="numeric"
                 />
               </div>
               <div className="space-y-2">
@@ -391,7 +411,10 @@ const AssignWork: React.FC = () => {
           <Button type="button" variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button type="submit" className="gradient-primary text-primary-foreground">
+          <Button
+            type="submit"
+            className="gradient-primary text-primary-foreground"
+          >
             Assign Task
           </Button>
         </div>

@@ -1,19 +1,26 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, LogIn, Shield, User } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff, LogIn, Shield, User } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+// import logo from "frontend/public/logo.jpg";
 
 const Login: React.FC = () => {
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [employeeEmail, setEmployeeEmail] = useState('');
-  const [employeePassword, setEmployeePassword] = useState('');
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [employeeEmail, setEmployeeEmail] = useState("");
+  const [employeePassword, setEmployeePassword] = useState("");
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [showEmployeePassword, setShowEmployeePassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -75,88 +82,88 @@ const Login: React.FC = () => {
   //     setIsLoading(false);
   //   }
   // };
-// !changed some part from here to****
-const handleAdminLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
+  // !changed some part from here to****
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-  try {
-    const success = await login(adminEmail, adminPassword);
+    try {
+      const success = await login(adminEmail, adminPassword);
 
-    if (!success) {
-      toast.error("Invalid email or password");
-      return;
+      if (!success) {
+        toast.error("Invalid email or password");
+        return;
+      }
+
+      // ✅ FIX 1: correct localStorage key
+      const storedUser = localStorage.getItem("user");
+
+      if (!storedUser) {
+        toast.error("Login failed. User not found.");
+        return;
+      }
+
+      const user = JSON.parse(storedUser);
+
+      // ✅ FIX 2: backend decides role
+      if (user.role === "admin") {
+        toast.success("Admin login successful!");
+        navigate("/admin/dashboard");
+      } else {
+        toast.error("You are not authorized as admin");
+      }
+    } catch (error: any) {
+      // ✅ FIX 3: show real error
+      console.error("Admin login error:", error);
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Network error. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
     }
+  };
+  const handleEmployeeLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-    // ✅ FIX 1: correct localStorage key
-    const storedUser = localStorage.getItem("user");
+    try {
+      const success = await login(employeeEmail, employeePassword);
 
-    if (!storedUser) {
-      toast.error("Login failed. User not found.");
-      return;
+      if (!success) {
+        toast.error("Invalid email or password");
+        return;
+      }
+
+      const storedUser = localStorage.getItem("user");
+
+      if (!storedUser) {
+        toast.error("Login failed. User not found.");
+        return;
+      }
+
+      const user = JSON.parse(storedUser);
+
+      if (user.role === "employee") {
+        toast.success("Employee login successful!");
+        navigate("/employee/dashboard");
+      } else {
+        toast.error("You are not authorized as employee");
+      }
+    } catch (error: any) {
+      console.error("Employee login error:", error);
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Network error. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    const user = JSON.parse(storedUser);
-
-    // ✅ FIX 2: backend decides role
-    if (user.role === "admin") {
-      toast.success("Admin login successful!");
-      navigate("/admin/dashboard");
-    } else {
-      toast.error("You are not authorized as admin");
-    }
-  } catch (error: any) {
-    // ✅ FIX 3: show real error
-    console.error("Admin login error:", error);
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      "Network error. Please try again."
-    );
-  } finally {
-    setIsLoading(false);
-  }
-};
-const handleEmployeeLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
-
-  try {
-    const success = await login(employeeEmail, employeePassword);
-
-    if (!success) {
-      toast.error("Invalid email or password");
-      return;
-    }
-
-    const storedUser = localStorage.getItem("user");
-
-    if (!storedUser) {
-      toast.error("Login failed. User not found.");
-      return;
-    }
-
-    const user = JSON.parse(storedUser);
-
-    if (user.role === "employee") {
-      toast.success("Employee login successful!");
-      navigate("/employee/dashboard");
-    } else {
-      toast.error("You are not authorized as employee");
-    }
-  } catch (error: any) {
-    console.error("Employee login error:", error);
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      "Network error. Please try again."
-    );
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-// !here**
+  // !here**
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="absolute inset-0 overflow-hidden">
@@ -165,11 +172,14 @@ const handleEmployeeLogin = async (e: React.FormEvent) => {
       </div>
 
       <Card className="w-full max-w-lg relative z-10 shadow-glow animate-scale-in">
-        <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center shadow-lg">
+        <CardHeader className="text-center space-y-4 flex items-center justify-center">
+          {/* <div className="mx-auto w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center shadow-lg">
             <span className="text-2xl font-bold text-primary-foreground">CC</span>
-          </div>
-          <CardTitle className="text-3xl font-bold gradient-text">Cyber City</CardTitle>
+          </div> */}
+          <img src="/logo.jpg" alt="Cyber City Logo" className="h-20 w-20 rounded-full object-cover shadow-md mb-3" />
+          <CardTitle className="text-3xl font-bold gradient-text">
+            Cyber City
+          </CardTitle>
           <CardDescription className="text-muted-foreground font-bold">
             Connecting People
           </CardDescription>
@@ -211,7 +221,7 @@ const handleEmployeeLogin = async (e: React.FormEvent) => {
                   <div className="relative">
                     <Input
                       id="admin-password"
-                      type={showAdminPassword ? 'text' : 'password'}
+                      type={showAdminPassword ? "text" : "password"}
                       placeholder="Enter password"
                       value={adminPassword}
                       onChange={(e) => setAdminPassword(e.target.value)}
@@ -223,7 +233,11 @@ const handleEmployeeLogin = async (e: React.FormEvent) => {
                       onClick={() => setShowAdminPassword(!showAdminPassword)}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      {showAdminPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      {showAdminPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -247,8 +261,15 @@ const handleEmployeeLogin = async (e: React.FormEvent) => {
                 </Button>
 
                 <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-sm font-medium text-muted-foreground mb-2"> CRM Tool — Proprietary Software of Blackmoon Tech. @All rights reserved</p>
-                  <p className="text-sm">Delivered to Cyber City. Unauthorized external use or distribution is strictly prohibited.</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">
+                    {" "}
+                    CRM Tool — Proprietary Software of Blackmoon Tech. @All
+                    rights reserved
+                  </p>
+                  <p className="text-sm">
+                    Delivered to Cyber City. Unauthorized external use or
+                    distribution is strictly prohibited.
+                  </p>
                 </div>
               </form>
             </TabsContent>
@@ -274,7 +295,7 @@ const handleEmployeeLogin = async (e: React.FormEvent) => {
                   <div className="relative">
                     <Input
                       id="employee-password"
-                      type={showEmployeePassword ? 'text' : 'password'}
+                      type={showEmployeePassword ? "text" : "password"}
                       placeholder="Enter password"
                       value={employeePassword}
                       onChange={(e) => setEmployeePassword(e.target.value)}
@@ -283,10 +304,16 @@ const handleEmployeeLogin = async (e: React.FormEvent) => {
                     />
                     <button
                       type="button"
-                      onClick={() => setShowEmployeePassword(!showEmployeePassword)}
+                      onClick={() =>
+                        setShowEmployeePassword(!showEmployeePassword)
+                      }
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      {showEmployeePassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      {showEmployeePassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
                     </button>
                   </div>
                 </div>
