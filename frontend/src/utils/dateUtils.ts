@@ -1,8 +1,21 @@
 import { format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
+
+const IST_TIMEZONE = "Asia/Kolkata";
 
 /**
- * Format date exactly as stored in DB (DB already IST)
+ * Convert UTC date string → IST formatted string
  */
-export const formatDateTime = (dateString: string) => {
-  return format(new Date(dateString), "dd/MM/yyyy hh:mm a");
+export const formatToIST = (
+  utcDate: string | Date,
+  pattern: string = "dd/MM/yyyy HH:mm"
+) => {
+  if (!utcDate) return "";
+
+  const date = typeof utcDate === "string"
+    ? new Date(utcDate)
+    : utcDate;
+
+  const istDate = toZonedTime(date, IST_TIMEZONE);
+  return format(istDate, pattern);
 };

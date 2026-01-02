@@ -25,7 +25,7 @@ import Pagination from "@/components/layout/shared/Pagination";
 import { toast } from "sonner";
 import { downloadExcel } from "@/utils/excel";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
-import { formatDateTime } from "@/utils/dateUtils";
+import { formatToIST } from "@/utils/dateUtils";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -79,7 +79,12 @@ const Customers: React.FC = () => {
 
       // Date filter
       if (fromDate && toDate) {
-        const isInRange = isWithinInterval(new Date(customer.createdAt), {
+        const customerISTDate = formatToIST(
+          new Date(customer.createdAt),
+          "Asia/Kolkata"
+        );
+
+        const isInRange = isWithinInterval(customerISTDate, {
           start: startOfDay(fromDate),
           end: endOfDay(toDate),
         });
@@ -103,7 +108,7 @@ const Customers: React.FC = () => {
       Contact: customer.phone,
       Email: customer.email,
       Type: customer.type.replace("_", " "),
-      "Created Date": formatDateTime(customer.createdAt),
+      "Created Date": formatToIST(customer.createdAt, "dd/MM/yyyy HH:mm"),
     }));
 
     downloadExcel(data, `customers_${activeTab}`);
@@ -257,7 +262,10 @@ const Customers: React.FC = () => {
                       {/* ! to here  */}
                       <TableCell>
                         <div>
-                         {formatDateTime(customer.createdAt)}
+                          <p>{formatToIST(customer.createdAt, "dd/MM/yyyy")}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatToIST(customer.createdAt, "HH:mm")}
+                          </p>
                         </div>
                       </TableCell>
                     </TableRow>
