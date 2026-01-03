@@ -486,6 +486,7 @@ const AllTasks: React.FC = () => {
                   <TableRow>
                     <TableHead>S.No</TableHead>
                     <TableHead>Customer Details</TableHead>
+                    <TableHead>Employee</TableHead>
                     <TableHead>Total Amount</TableHead>
                     <TableHead>Deduction</TableHead>
                     <TableHead>Revenue</TableHead>
@@ -522,6 +523,7 @@ const AllTasks: React.FC = () => {
                             </p>
                           </div>
                         </TableCell>
+                         <TableCell>{task.employeeName}</TableCell>
                         <TableCell>₹{task.amount}</TableCell>
                         <TableCell>₹{task.deductionAmount || 0}</TableCell>
                         <TableCell className="font-semibold text-primary">
@@ -619,15 +621,33 @@ const AllTasks: React.FC = () => {
                 <div className="space-y-2">
                   <Label>Phone</Label>
                   <Input
+                    maxLength={10}
                     value={editingFormTask.customerPhone}
+                    onChange={(e) => {
+                      const value = e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 10);
+                      setEditingFormTask({
+                        ...editingFormTask,
+                        customerPhone: value,
+                      });
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={editingFormTask.customerEmail}
                     onChange={(e) =>
                       setEditingFormTask({
                         ...editingFormTask,
-                        customerPhone: e.target.value,
+                        customerEmail: e.target.value.toLowerCase(),
                       })
                     }
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label>Application ID</Label>
                   <Input
@@ -660,26 +680,32 @@ const AllTasks: React.FC = () => {
                   <Label>Total Amount (₹)</Label>
                   <Input
                     type="number"
-                    value={editingFormTask.amount}
-                    onChange={(e) =>
-                      handleFormTaskAmountChange(
-                        "amount",
-                        parseFloat(e.target.value) || 0
-                      )
+                    placeholder="Enter amount"
+                    value={
+                      editingFormTask.amount === 0 ? "" : editingFormTask.amount
                     }
+                    onChange={(e) => {
+                      const value =
+                        e.target.value === "" ? 0 : Number(e.target.value);
+                      handleFormTaskAmountChange("amount", value);
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Deduction Amount (₹)</Label>
                   <Input
                     type="number"
-                    value={editingFormTask.deductionAmount || 0}
-                    onChange={(e) =>
-                      handleFormTaskAmountChange(
-                        "deductionAmount",
-                        parseFloat(e.target.value) || 0
-                      )
+                    placeholder="Enter deduction"
+                    value={
+                      editingFormTask.deductionAmount === 0
+                        ? ""
+                        : editingFormTask.deductionAmount
                     }
+                    onChange={(e) => {
+                      const value =
+                        e.target.value === "" ? 0 : Number(e.target.value);
+                      handleFormTaskAmountChange("deductionAmount", value);
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
@@ -742,7 +768,7 @@ const AllTasks: React.FC = () => {
                   onChange={(e) =>
                     setEditingFormTask({
                       ...editingFormTask,
-                      description: e.target.value,
+                      description: e.target.value.toUpperCase(),
                     })
                   }
                 />
@@ -818,26 +844,34 @@ const AllTasks: React.FC = () => {
                   <Label>Total Amount (₹)</Label>
                   <Input
                     type="number"
-                    value={editingXeroxTask.amount}
-                    onChange={(e) =>
-                      handleXeroxTaskAmountChange(
-                        "amount",
-                        parseFloat(e.target.value) || 0
-                      )
+                    placeholder="Enter amount"
+                    value={
+                      editingXeroxTask.amount === 0
+                        ? ""
+                        : editingXeroxTask.amount
                     }
+                    onChange={(e) => {
+                      const value =
+                        e.target.value === "" ? 0 : Number(e.target.value);
+                      handleXeroxTaskAmountChange("amount", value);
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Deduction Amount (₹)</Label>
                   <Input
                     type="number"
-                    value={editingXeroxTask.deductionAmount || 0}
-                    onChange={(e) =>
-                      handleXeroxTaskAmountChange(
-                        "deductionAmount",
-                        parseFloat(e.target.value) || 0
-                      )
+                    placeholder="Enter deduction"
+                    value={
+                      editingXeroxTask.deductionAmount === 0
+                        ? ""
+                        : editingXeroxTask.deductionAmount
                     }
+                    onChange={(e) => {
+                      const value =
+                        e.target.value === "" ? 0 : Number(e.target.value);
+                      handleXeroxTaskAmountChange("deductionAmount", value);
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
@@ -878,7 +912,7 @@ const AllTasks: React.FC = () => {
                   onChange={(e) =>
                     setEditingXeroxTask({
                       ...editingXeroxTask,
-                      description: e.target.value,
+                      description: e.target.value.toUpperCase(),
                     })
                   }
                 />
