@@ -300,25 +300,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   // };
   const updateTask = async (id: string, updates: any) => {
     try {
-      // 1️⃣ CALL BACKEND API
       await api.put(`/tasks/${id}`, {
-        customerName: updates.customerName,
-        customerPhone: updates.customerPhone,
-        customerEmail: updates.customerEmail,
-        applicationId: updates.applicationId,
-        password: updates.password,
-        amount: updates.amount,
-        deductionAmount: updates.deductionAmount,
+        customer_name: updates.customerName,
+        customer_phone: updates.customerPhone,
+        customer_email: updates.customerEmail,
+        application_id: updates.applicationId,
+        application_password: updates.password,
+        total_amount: updates.amount,
+        deduction_amount: updates.deductionAmount,
         revenue: updates.revenue,
-        workStatus: updates.workStatus,
-        paymentStatus: updates.paymentStatus,
+        work_status: updates.workStatus,
+        payment_status: updates.paymentStatus,
         description: updates.description,
       });
 
-      // 2️⃣ UPDATE FRONTEND STATE
-      setFormFillingTasks((prev) =>
-        prev.map((task) => (task.id === id ? { ...task, ...updates } : task))
-      );
+      // refresh from DB (SAFEST)
+      await fetchTasksFromDB();
     } catch (error) {
       console.error("Update form filling task failed", error);
       throw error;
@@ -335,19 +332,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   const updateXeroxTask = async (id: string, updates: any) => {
     try {
       await api.put(`/tasks/${id}`, {
-        customerName: updates.customerName,
-        customerPhone: updates.customerPhone,
-        customerEmail: updates.customerEmail,
-        amount: updates.amount,
-        deductionAmount: updates.deductionAmount,
+        customer_name: updates.customerName,
+        customer_phone: updates.customerPhone,
+        customer_email: updates.customerEmail,
+        total_amount: updates.amount,
+        deduction_amount: updates.deductionAmount,
         revenue: updates.revenue,
-        paymentStatus: updates.paymentStatus,
+        payment_status: updates.paymentStatus,
         description: updates.description,
       });
 
-      setXeroxTasks((prev) =>
-        prev.map((task) => (task.id === id ? { ...task, ...updates } : task))
-      );
+      await fetchTasksFromDB();
     } catch (error) {
       console.error("Update xerox task failed", error);
       throw error;

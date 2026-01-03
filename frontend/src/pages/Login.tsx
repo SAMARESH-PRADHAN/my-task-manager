@@ -210,7 +210,7 @@ const Login: React.FC = () => {
                     type="email"
                     placeholder="Enter admin email"
                     value={adminEmail}
-                    onChange={(e) => setAdminEmail(e.target.value)}
+                    onChange={(e) => setAdminEmail(e.target.value.toLowerCase())}
                     required
                     className="h-12"
                   />
@@ -284,7 +284,7 @@ const Login: React.FC = () => {
                     type="email"
                     placeholder="Enter employee email"
                     value={employeeEmail}
-                    onChange={(e) => setEmployeeEmail(e.target.value)}
+                    onChange={(e) => setEmployeeEmail(e.target.value.toLowerCase())}
                     required
                     className="h-12"
                   />

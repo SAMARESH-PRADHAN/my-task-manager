@@ -259,14 +259,14 @@ const MyTasks: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleAmountChange = (
-    field: "amount" | "deductionAmount",
-    value: number
-  ) => {
-    const newData = { ...editFormData, [field]: value };
-    newData.revenue = newData.amount - newData.deductionAmount;
-    setEditFormData(newData);
-  };
+  // const handleAmountChange = (
+  //   field: "amount" | "deductionAmount",
+  //   value: number
+  // ) => {
+  //   const newData = { ...editFormData, [field]: value };
+  //   newData.revenue = newData.amount - newData.deductionAmount;
+  //   setEditFormData(newData);
+  // };
 
   const handleUpdateTask = async () => {
     if (!editingTask) return;
@@ -276,9 +276,11 @@ const MyTasks: React.FC = () => {
         /* ================= TASK TABLE ================= */
         description: editFormData.description,
 
-        total_amount: editFormData.amount,
-        deduction_amount: editFormData.deductionAmount,
-        revenue: editFormData.revenue,
+        total_amount: Number(editFormData.amount || 0),
+        deduction_amount: Number(editFormData.deductionAmount || 0),
+        revenue:
+          Number(editFormData.amount || 0) -
+          Number(editFormData.deductionAmount || 0),
 
         payment_mode: editFormData.paymentMode,
         payment_status: editFormData.paymentStatus,
@@ -575,7 +577,6 @@ const MyTasks: React.FC = () => {
               )}
             </TableBody>
           </Table>
-          
         </CardContent>
       </Card>
 
@@ -609,13 +610,19 @@ const MyTasks: React.FC = () => {
                 <div className="space-y-2">
                   <Label>Phone Number</Label>
                   <Input
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
                     value={editFormData.customerPhone}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const value = e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 10);
                       setEditFormData({
                         ...editFormData,
-                        customerPhone: e.target.value,
-                      })
-                    }
+                        customerPhone: value,
+                      });
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
@@ -626,7 +633,7 @@ const MyTasks: React.FC = () => {
                     onChange={(e) =>
                       setEditFormData({
                         ...editFormData,
-                        customerEmail: e.target.value,
+                        customerEmail: e.target.value.toLowerCase(),
                       })
                     }
                   />
@@ -690,7 +697,7 @@ const MyTasks: React.FC = () => {
                   onChange={(e) =>
                     setEditFormData({
                       ...editFormData,
-                      description: e.target.value,
+                      description: e.target.value.toUpperCase(),
                     })
                   }
                   rows={3}
@@ -703,26 +710,40 @@ const MyTasks: React.FC = () => {
                   <Label>Total Amount (₹)</Label>
                   <Input
                     type="number"
-                    value={editFormData.amount}
-                    onChange={(e) =>
-                      handleAmountChange(
-                        "amount",
-                        parseFloat(e.target.value) || 0
-                      )
-                    }
+                    placeholder="Enter amount"
+                    value={editFormData.amount === 0 ? "" : editFormData.amount}
+                    onChange={(e) => {
+                      const value =
+                        e.target.value === "" ? 0 : Number(e.target.value);
+
+                      setEditFormData({
+                        ...editFormData,
+                        amount: value,
+                        revenue: value - editFormData.deductionAmount,
+                      });
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Deduction Amount (₹)</Label>
                   <Input
                     type="number"
-                    value={editFormData.deductionAmount}
-                    onChange={(e) =>
-                      handleAmountChange(
-                        "deductionAmount",
-                        parseFloat(e.target.value) || 0
-                      )
+                    placeholder="Enter deduction"
+                    value={
+                      editFormData.deductionAmount === 0
+                        ? ""
+                        : editFormData.deductionAmount
                     }
+                    onChange={(e) => {
+                      const value =
+                        e.target.value === "" ? 0 : Number(e.target.value);
+
+                      setEditFormData({
+                        ...editFormData,
+                        deductionAmount: value,
+                        revenue: editFormData.amount - value,
+                      });
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
