@@ -62,7 +62,7 @@ const Customers: React.FC = () => {
     });
 
     return Array.from(customerMap.values());
-  }, [formFillingTasks]);
+  }, [formFillingTasks, customers]);
 
   const filteredCustomers = useMemo(() => {
     return uniqueCustomers.filter((customer) => {
