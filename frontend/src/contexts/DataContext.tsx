@@ -15,7 +15,7 @@ export interface Customer {
   name: string;
   email: string;
   phone: string;
-  type: "job_seeker" | "student" | "gov_scheme";
+  type: "job_seeker" | "student" | "gov_scheme" | "xerox";
   createdAt: string;
 }
 
