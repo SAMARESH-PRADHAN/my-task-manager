@@ -104,6 +104,8 @@ interface DataContextType {
     revenue: number;
   };
   updateEmployee: (id: string, updates: Partial<Employee>) => Promise<void>;
+
+  refreshAll: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -141,10 +143,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     );
   };
 
+  const refreshAll = async () => {
+    await Promise.all([
+      fetchEmployees(),
+      fetchTasksFromDB(),
+      fetchCustomersFromDB(),
+    ]);
+  };
+
   useEffect(() => {
-    fetchEmployees();
-    fetchTasksFromDB();
-    fetchCustomersFromDB();
+    refreshAll();
   }, []);
 
   const addEmployee = async (employee: Omit<Employee, "id" | "createdAt">) => {
@@ -237,6 +245,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   ========================= */
   const addCustomer = async (customer: Omit<Customer, "id" | "createdAt">) => {
     const res = await api.post("/customers", customer);
+    await refreshAll();
 
     const newCustomer: Customer = {
       id: String(res.data.id), // ✅ REAL DB ID
@@ -269,6 +278,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       payment_mode: task.paymentMode,
     });
     await fetchTasksFromDB();
+    await refreshAll();
   };
 
   const addXeroxTask = async (task: any) => {
@@ -316,6 +326,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
       // refresh from DB (SAFEST)
       await fetchTasksFromDB();
+      await refreshAll();
     } catch (error) {
       console.error("Update form filling task failed", error);
       throw error;
@@ -353,6 +364,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     try {
       await api.delete(`/tasks/${id}`);
       await fetchTasksFromDB(); // refresh UI
+      await refreshAll();
     } catch (error) {
       console.error("Delete task failed", error);
       throw error;
@@ -419,6 +431,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         getEmployeeTasks,
         getEmployeePendingCount,
         getTodayStats,
+        refreshAll,
       }}
     >
       {children}

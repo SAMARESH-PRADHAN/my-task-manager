@@ -15,6 +15,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 // import logo from "frontend/public/logo.jpg";
+import { useData } from "@/contexts/DataContext";
+
 
 const Login: React.FC = () => {
   const [adminEmail, setAdminEmail] = useState("");
@@ -25,6 +27,7 @@ const Login: React.FC = () => {
   const [showEmployeePassword, setShowEmployeePassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
+  const { refreshAll } = useData();
   const navigate = useNavigate();
 
   // const handleAdminLogin = async (e: React.FormEvent) => {
@@ -108,6 +111,7 @@ const Login: React.FC = () => {
       // ✅ FIX 2: backend decides role
       if (user.role === "admin") {
         toast.success("Admin login successful!");
+        await refreshAll();
         navigate("/admin/dashboard");
       } else {
         toast.error("You are not authorized as admin");
@@ -147,6 +151,7 @@ const Login: React.FC = () => {
 
       if (user.role === "employee") {
         toast.success("Employee login successful!");
+        await refreshAll();
         navigate("/employee/dashboard");
       } else {
         toast.error("You are not authorized as employee");

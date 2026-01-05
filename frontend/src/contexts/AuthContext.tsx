@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { api } from "@/lib/api";
 
+
 export interface User {
   id: number;
   name: string;
