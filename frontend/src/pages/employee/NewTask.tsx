@@ -71,7 +71,10 @@ const NewTask: React.FC = () => {
     }
 
     try {
-      const customerType = formServiceType || "job_seeker";
+      const customerType: "job_seeker" | "student" | "gov_scheme" | "xerox" =
+        serviceType === "form_filling"
+          ? formServiceType || "job_seeker"
+          : "xerox";
 
       const customer = await addCustomer({
         name: customerName,
