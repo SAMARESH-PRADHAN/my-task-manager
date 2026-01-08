@@ -49,11 +49,27 @@ const AdminDashboard: React.FC = () => {
     todayXerox.reduce((sum, t) => sum + (t.revenue || t.amount), 0);
 
   // Pending tasks count
-  const pendingFormFilling = formFillingTasks.filter(
+
+  // 1️⃣ Form Filling – work pending
+  const pendingFormWork = formFillingTasks.filter(
     (t) => t.workStatus === "pending"
   );
-  // const pendingXerox = xeroxTasks.filter((t) => t.paymentStatus === 'pending');
-  const totalPendingTasks = pendingFormFilling.length;
+
+  // 2️⃣ Form Filling – payment pending (pending + unpaid)
+  const pendingFormPayment = formFillingTasks.filter(
+    (t) => t.paymentStatus === "pending" || t.paymentStatus === "unpaid"
+  );
+
+  // 3️⃣ Xerox / Other – payment pending (pending + unpaid)
+  const pendingXeroxPayment = xeroxTasks.filter(
+    (t) => t.paymentStatus === "pending" || t.paymentStatus === "unpaid"
+  );
+
+  // ✅ FINAL COUNT
+  const totalPendingTasks =
+    pendingFormWork.length +
+    pendingFormPayment.length +
+    pendingXeroxPayment.length;
 
   // Service distribution data
   const jobSeekerCount = todayFormFilling.filter(

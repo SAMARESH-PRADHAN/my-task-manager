@@ -184,6 +184,9 @@ router.put("/:id", auth, async (req, res) => {
 /**
  * DELETE TASK
  */
+/**
+ * DELETE TASK + CUSTOMER IF NO MORE TASKS
+ */
 router.delete("/:id", auth, async (req, res) => {
   const taskId = Number(req.params.id);
 
@@ -192,12 +195,34 @@ router.delete("/:id", auth, async (req, res) => {
   }
 
   try {
+    // 1️⃣ Get the customer_id linked to this task
+    const taskResult = await sql`
+      SELECT customer_id
+      FROM tasks
+      WHERE id = ${taskId}
+    `;
+
+    if (taskResult.length === 0) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    const customerId = taskResult[0].customer_id;
+
+    // 2️⃣ Delete the task
     await sql`
       DELETE FROM tasks
       WHERE id = ${taskId}
     `;
 
-    res.json({ message: "Task deleted successfully" });
+    // 3️⃣ Delete customer if exists
+    if (customerId) {
+      await sql`
+        DELETE FROM customers
+        WHERE id = ${customerId}
+      `;
+    }
+
+    res.json({ message: "Task and customer deleted successfully" });
   } catch (err) {
     console.error("DELETE TASK ERROR:", err);
     res.status(500).json({ message: "Server error" });
