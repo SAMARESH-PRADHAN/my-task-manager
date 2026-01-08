@@ -35,7 +35,7 @@ export interface FormFillingTask {
   description: string;
   paymentMode: "cash" | "upi" | "card" | "";
   workStatus: "pending" | "completed";
-  paymentStatus: "pending" | "completed";
+  paymentStatus: "pending" | "completed" | "unpaid";
   employeeId: string;
   employeeName: string;
   screenshotUrl?: string;
@@ -53,7 +53,7 @@ export interface XeroxTask {
   revenue: number;
   description: string;
   paymentMode: "cash" | "upi" | "card" | "";
-  paymentStatus: "pending" | "completed";
+  paymentStatus: "pending" | "completed" | "unpaid";
   employeeId: string;
   employeeName: string;
   createdAt: string;
@@ -190,7 +190,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           deductionAmount: Number(t.deduction_amount ?? 0),
           revenue: Number(t.revenue ?? 0),
           workStatus: t.work_status ?? "pending",
-          paymentStatus: t.payment_status ?? "pending",
+          paymentStatus:
+            t.payment_status === "unpaid"
+              ? "pending"
+              : t.payment_status ?? "pending",
+
           paymentMode: t.payment_mode ?? "",
           description: t.description ?? "",
           employeeId: t.employee_id ? String(t.employee_id) : "",
@@ -208,7 +212,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           amount: Number(t.total_amount ?? 0),
           deductionAmount: Number(t.deduction_amount ?? 0),
           revenue: Number(t.revenue ?? 0),
-          paymentStatus: t.payment_status ?? "pending",
+          paymentStatus:
+            t.payment_status === "unpaid" ? "pending" : t.payment_status ?? "pending",
           paymentMode: t.payment_mode ?? "",
           description: t.description ?? "",
           employeeId: t.employee_id ? String(t.employee_id) : "",
@@ -385,19 +390,28 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   });
 
   const getEmployeePendingCount = (employeeId: string) => {
-    const formPending = formFillingTasks.filter(
+    // 1️⃣ Form Filling – work pending
+    const formWorkPending = formFillingTasks.filter(
       (t) =>
         String(t.employeeId) === String(employeeId) &&
         t.workStatus === "pending"
     ).length;
 
-    // const xeroxPending = xeroxTasks.filter(
-    //   (t) =>
-    //     String(t.employeeId) === String(employeeId) &&
-    //     t.paymentStatus !== "completed"
-    // ).length;
+    // 2️⃣ Form Filling – payment pending
+    const formPaymentPending = formFillingTasks.filter(
+      (t) =>
+        String(t.employeeId) === String(employeeId) &&
+        (t.paymentStatus === "pending" || t.paymentStatus === "unpaid")
+    ).length;
 
-    return formPending;
+    // 3️⃣ Xerox – payment pending
+    const xeroxPaymentPending = xeroxTasks.filter(
+      (t) =>
+        String(t.employeeId) === String(employeeId) &&
+        t.paymentStatus === "pending"
+    ).length;
+
+    return formWorkPending + formPaymentPending + xeroxPaymentPending;
   };
 
   // ! changes here

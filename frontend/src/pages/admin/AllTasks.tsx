@@ -171,7 +171,7 @@ const AllTasks: React.FC = () => {
         Revenue: task.revenue || task.amount,
         "Work Status": task.workStatus,
         "Payment Status": task.paymentStatus,
-        Description: task.description,
+        Description: task.description.replace(/\n/g, " "),
         Date: formatToIST(task.createdAt, "dd/MM/yyyy HH:mm"),
       }));
       downloadExcel(data, "form_filling_tasks");
@@ -185,7 +185,7 @@ const AllTasks: React.FC = () => {
         Deduction: task.deductionAmount || 0,
         Revenue: task.revenue || task.amount,
         "Payment Status": task.paymentStatus,
-        Description: task.description,
+        Description: task.description.replace(/\n/g, " "),
         Date: formatToIST(task.createdAt, "dd/MM/yyyy HH:mm"),
       }));
       downloadExcel(data, "xerox_tasks");
@@ -382,10 +382,9 @@ const AllTasks: React.FC = () => {
                   <TableRow>
                     <TableHead>S.No</TableHead>
                     <TableHead>Customer Details</TableHead>
-                    <TableHead>Service Type</TableHead>
+                    {/* <TableHead>Service Type</TableHead> */}
                     <TableHead>Employee</TableHead>
-                    <TableHead>Application ID</TableHead>
-                    <TableHead>Password</TableHead>
+                    <TableHead>Application Details</TableHead>
                     <TableHead>Total Amount</TableHead>
                     <TableHead>Deduction</TableHead>
                     <TableHead>Revenue</TableHead>
@@ -400,7 +399,7 @@ const AllTasks: React.FC = () => {
                   {(paginatedTasks as FormFillingTask[]).length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={14}
+                        colSpan={12}
                         className="text-center py-8 text-muted-foreground"
                       >
                         No tasks found
@@ -413,23 +412,53 @@ const AllTasks: React.FC = () => {
                           {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                         </TableCell>
                         <TableCell>
-                          <div>
+                          <div className="space-y-1">
                             <p className="font-semibold">{task.customerName}</p>
+
                             <p className="text-sm text-muted-foreground">
                               {task.customerPhone}
                             </p>
-                            <p className="text-sm text-muted-foreground">
-                              {task.customerEmail}
+
+                            {task.customerEmail && (
+                              <p className="text-sm text-muted-foreground">
+                                {task.customerEmail}
+                              </p>
+                            )}
+
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary capitalize">
+                              {(task.serviceType ?? "unknown").replace(
+                                "_",
+                                " "
+                              )}
+                            </span>
+                          </div>
+                        </TableCell>
+                        {/* <TableCell className="capitalize">
+                          {(task.serviceType ?? "unknown").replace("_", " ")}
+                        </TableCell> */}
+
+                        <TableCell>{task.employeeName}</TableCell>
+                        <TableCell>
+                          <div className="space-y-1 text-sm">
+                            <p>
+                              <span className="text-muted-foreground">
+                                App ID:
+                              </span>{" "}
+                              <span className="font-medium">
+                                {task.applicationId || "-"}
+                              </span>
+                            </p>
+                            <p>
+                              <span className="text-muted-foreground">
+                                Password:
+                              </span>{" "}
+                              <span className="font-medium">
+                                {task.password || "-"}
+                              </span>
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell className="capitalize">
-                          {(task.serviceType ?? "unknown").replace("_", " ")}
-                        </TableCell>
 
-                        <TableCell>{task.employeeName}</TableCell>
-                        <TableCell>{task.applicationId || "-"}</TableCell>
-                        <TableCell>{task.password || "-"}</TableCell>
                         <TableCell>₹{task.amount}</TableCell>
                         <TableCell>₹{task.deductionAmount || 0}</TableCell>
                         <TableCell className="font-semibold text-primary">
@@ -464,16 +493,30 @@ const AllTasks: React.FC = () => {
                           {formatToIST(task.createdAt, "dd/MM/yyyy HH:mm")}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setEditingFormTask(task);
-                              setIsEditModalOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditingFormTask(task);
+                                setIsEditModalOpen(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setDeletingTaskId(task.id);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -523,7 +566,7 @@ const AllTasks: React.FC = () => {
                             </p>
                           </div>
                         </TableCell>
-                         <TableCell>{task.employeeName}</TableCell>
+                        <TableCell>{task.employeeName}</TableCell>
                         <TableCell>₹{task.amount}</TableCell>
                         <TableCell>₹{task.deductionAmount || 0}</TableCell>
                         <TableCell className="font-semibold text-primary">

@@ -99,7 +99,8 @@ const MyTasks: React.FC = () => {
           revenue: Number(t.revenue || 0),
           description: t.description || "",
           paymentMode: t.payment_mode || "",
-          paymentStatus: t.payment_status,
+          paymentStatus:
+            t.payment_status === "unpaid" ? "pending" : t.payment_status,
           createdAt: t.created_at,
         };
 
@@ -238,7 +239,8 @@ const MyTasks: React.FC = () => {
       revenue: task.revenue || task.amount,
 
       paymentMode: task.paymentMode,
-      paymentStatus: task.paymentStatus,
+      paymentStatus:
+        task.paymentStatus === "unpaid" ? "pending" : task.paymentStatus,
 
       serviceType:
         activeTab === "form_filling"
@@ -457,11 +459,7 @@ const MyTasks: React.FC = () => {
                 <TableHead>S.No</TableHead>
                 <TableHead>Customer Details</TableHead>
                 {activeTab === "form_filling" && (
-                  <>
-                    <TableHead>Service Type</TableHead>
-                    <TableHead>Application No.</TableHead>
-                    <TableHead>Password</TableHead>
-                  </>
+                  <TableHead>Application Details</TableHead>
                 )}
                 <TableHead>Total Amount</TableHead>
                 <TableHead>Deduction</TableHead>
@@ -470,8 +468,7 @@ const MyTasks: React.FC = () => {
                 {activeTab === "form_filling" && (
                   <TableHead>Work Status</TableHead>
                 )}
-                <TableHead>Payment Mode</TableHead>
-                <TableHead>Payment Status</TableHead>
+                <TableHead>Payment</TableHead>
                 <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -479,7 +476,7 @@ const MyTasks: React.FC = () => {
               {paginatedTasks.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={activeTab === "form_filling" ? 13 : 10}
+                    colSpan={activeTab === "form_filling" ? 10 : 9}
                     className="text-center py-8 text-muted-foreground"
                   >
                     No tasks found
@@ -492,31 +489,43 @@ const MyTasks: React.FC = () => {
                       {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                     </TableCell>
                     <TableCell>
-                      <div>
+                      <div className="space-y-1">
                         <p className="font-semibold">{task.customerName}</p>
+
                         <p className="text-sm text-muted-foreground">
                           {task.customerPhone}
                         </p>
+
                         <p className="text-sm text-muted-foreground">
                           {task.customerEmail}
                         </p>
+
+                        {activeTab === "form_filling" && (
+                          <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary capitalize">
+                            {(task as FormFillingTask).serviceType?.replace(
+                              "_",
+                              " "
+                            )}
+                          </span>
+                        )}
                       </div>
                     </TableCell>
+
                     {activeTab === "form_filling" && (
-                      <>
-                        <TableCell className="capitalize">
-                          {(
-                            (task as FormFillingTask).serviceType ?? "-"
-                          ).replace("_", " ")}
-                        </TableCell>
-                        <TableCell>
-                          {(task as FormFillingTask).applicationId || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {(task as FormFillingTask).password || "-"}
-                        </TableCell>
-                      </>
+                      <TableCell>
+                        <div className="text-sm space-y-1">
+                          <p>
+                            <span className="font-medium">App ID:</span>{" "}
+                            {(task as FormFillingTask).applicationId || "-"}
+                          </p>
+                          <p>
+                            <span className="font-medium">Password:</span>{" "}
+                            {(task as FormFillingTask).password || "-"}
+                          </p>
+                        </div>
+                      </TableCell>
                     )}
+
                     <TableCell>₹{task.amount}</TableCell>
                     <TableCell>₹{task.deductionAmount || 0}</TableCell>
                     <TableCell className="font-semibold text-primary">
@@ -549,20 +558,24 @@ const MyTasks: React.FC = () => {
                         </Button>
                       </TableCell>
                     )}
-                    <TableCell className="capitalize">
-                      {task.paymentMode || "-"}
-                    </TableCell>
                     <TableCell>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          task.paymentStatus === "completed"
-                            ? "bg-success/20 text-success"
-                            : "bg-warning/20 text-warning"
-                        }`}
-                      >
-                        {task.paymentStatus}
-                      </span>
+                      <div className="space-y-1">
+                        <p className="capitalize font-medium">
+                          {task.paymentMode || "Not Selected"}
+                        </p>
+
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                            task.paymentStatus === "completed"
+                              ? "bg-success/20 text-success"
+                              : "bg-warning/20 text-warning"
+                          }`}
+                        >
+                          {task.paymentStatus}
+                        </span>
+                      </div>
                     </TableCell>
+
                     <TableCell>
                       <Button
                         size="sm"
