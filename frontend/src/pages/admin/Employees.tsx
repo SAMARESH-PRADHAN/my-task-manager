@@ -125,8 +125,8 @@ const Employees: React.FC = () => {
         (t) => t.workStatus === "pending" || t.paymentStatus === "pending"
       ).length + empXerox.filter((t) => t.paymentStatus === "pending").length;
     const totalRevenue =
-      empFormFilling.reduce((sum, t) => sum + t.amount, 0) +
-      empXerox.reduce((sum, t) => sum + t.amount, 0);
+      empFormFilling.reduce((sum, t) => sum + t.revenue, 0) +
+      empXerox.reduce((sum, t) => sum + t.revenue, 0);
 
     return { totalTasks, pendingTasks, totalRevenue };
   };
@@ -227,7 +227,7 @@ const Employees: React.FC = () => {
         customerName: t.customerName,
         customerPhone: t.customerPhone,
         serviceType: t.serviceType,
-        amount: t.amount,
+        amount: t.revenue,
         workStatus: t.workStatus,
         paymentStatus: t.paymentStatus,
         createdAt: t.createdAt,
@@ -236,7 +236,7 @@ const Employees: React.FC = () => {
         customerName: t.customerName,
         customerPhone: t.customerPhone,
         serviceType: "Xerox/Other",
-        amount: t.amount,
+        amount: t.revenue,
         workStatus: "N/A",
         paymentStatus: t.paymentStatus,
         createdAt: t.createdAt,
@@ -600,7 +600,7 @@ const Employees: React.FC = () => {
                       <TableHead>S.No</TableHead>
                       <TableHead>Customer</TableHead>
                       <TableHead>Service</TableHead>
-                      <TableHead>Amount</TableHead>
+                      <TableHead>Revenue</TableHead>
                       <TableHead>Payment Status</TableHead>
                       <TableHead>Date</TableHead>
                     </TableRow>
@@ -648,7 +648,7 @@ const Employees: React.FC = () => {
                                 )
                               : "Xerox/Other"}
                           </TableCell>
-                          <TableCell>₹{task.amount}</TableCell>
+                          <TableCell>₹{task.revenue}</TableCell>
                           <TableCell>
                             <span
                               className={`px-2 py-1 rounded-full text-xs ${
