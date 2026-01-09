@@ -385,12 +385,12 @@ const AllTasks: React.FC = () => {
                     {/* <TableHead>Service Type</TableHead> */}
                     <TableHead>Employee</TableHead>
                     <TableHead>Application Details</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Work Status</TableHead>
+                    <TableHead>Payment Status</TableHead>
                     <TableHead>Total Amount</TableHead>
                     <TableHead>Deduction</TableHead>
                     <TableHead>Revenue</TableHead>
-                    <TableHead>Work Status</TableHead>
-                    <TableHead>Payment Status</TableHead>
-                    <TableHead>Description</TableHead>
                     <TableHead>Date & Time</TableHead>
                     <TableHead>Action</TableHead>
                   </TableRow>
@@ -458,13 +458,10 @@ const AllTasks: React.FC = () => {
                             </p>
                           </div>
                         </TableCell>
-
-                        <TableCell>₹{task.amount}</TableCell>
-                        <TableCell>₹{task.deductionAmount || 0}</TableCell>
-                        <TableCell className="font-semibold text-primary">
-                          ₹{task.revenue || task.amount}
+                         <TableCell className="max-w-[150px] truncate">
+                          {task.description || "-"}
                         </TableCell>
-                        <TableCell>
+                         <TableCell>
                           <span
                             className={`px-2 py-1 rounded-full text-xs ${
                               task.workStatus === "completed"
@@ -486,9 +483,13 @@ const AllTasks: React.FC = () => {
                             {task.paymentStatus}
                           </span>
                         </TableCell>
-                        <TableCell className="max-w-[150px] truncate">
-                          {task.description || "-"}
+                        <TableCell>₹{task.amount}</TableCell>
+                        <TableCell>₹{task.deductionAmount || 0}</TableCell>
+                        <TableCell className="font-semibold text-primary">
+                          ₹{task.revenue || task.amount}
                         </TableCell>
+                       
+                       
                         <TableCell>
                           {formatToIST(task.createdAt, "dd/MM/yyyy HH:mm")}
                         </TableCell>
