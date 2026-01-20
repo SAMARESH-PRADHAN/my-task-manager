@@ -1,113 +1,40 @@
-import makeWASocket, {
-  useMultiFileAuthState,
-  DisconnectReason,
-} from "@whiskeysockets/baileys";
+import axios from "axios";
 
-import qrcode from "qrcode-terminal";
+const DIVINE_BASE_URL = "http://16.170.238.132";
+const DIVINE_API_KEY = process.env.DIVINE_API_KEY;
 
-let sock;
-let isReady = false;
+const formatPhone = (phone) => {
+  let p = phone.toString().replace(/\D/g, "");
+  if (!p.startsWith("91")) p = "91" + p;
+  return p;
+};
 
-export async function initWhatsApp() {
+export async function sendWhatsAppMessage(phone, userMessage) {
   try {
-    const { state, saveCreds } = await useMultiFileAuthState(".wa_auth");
+    // ✅ WhatsApp Template
+    const finalMessage = `Hello 👋,
+Hope you're doing well! 😊
 
-    sock = makeWASocket({
-      auth: state,
-      browser: ["CRM Tool", "Chrome", "1.0"],
+${userMessage}
+
+Thank you
+— Cybercity`;
+
+    const response = await axios.get(`${DIVINE_BASE_URL}/send`, {
+      params: {
+        api_key: DIVINE_API_KEY,
+        phone: formatPhone(phone),
+        text: finalMessage, // 👈 TEMPLATE MESSAGE
+      },
     });
 
-    sock.ev.on("connection.update", async (update) => {
-      const { connection, lastDisconnect, qr } = update;
-
-      if (qr) {
-        console.log("\n📱 Scan this QR code with WhatsApp:\n");
-        qrcode.generate(qr, { small: true });
-      }
-
-      if (connection === "open") {
-        isReady = true;
-        console.log("✅ WhatsApp connected & READY");
-      }
-
-      if (connection === "close") {
-        isReady = false;
-
-        const statusCode = lastDisconnect?.error?.output?.statusCode;
-        const shouldReconnect =
-          statusCode !== DisconnectReason.loggedOut;
-
-        console.error(
-          "⚠ WhatsApp disconnected",
-          "| statusCode:",
-          statusCode,
-          "| reconnect:",
-          shouldReconnect
-        );
-
-        if (shouldReconnect) {
-          initWhatsApp();
-        }
-      }
-    });
-
-    sock.ev.on("creds.update", saveCreds);
-  } catch (err) {
-    console.error("❌ WhatsApp init failed:", err);
-  }
-}
-
-export async function sendWhatsAppMessage(phone, message) {
-  try {
-    if (!sock || !isReady) {
-      console.error("❌ WhatsApp socket not ready yet");
-      return;
+    if (!response.data?.status) {
+      throw new Error(response.data?.error || "Divine send failed");
     }
 
-    // 🔹 Clean phone number
-    const cleanPhone = phone.replace(/\D/g, "");
-
-    if (!cleanPhone || cleanPhone.length < 10) {
-      console.error("❌ Invalid phone number:", phone);
-      return;
-    }
-
-    // 🔹 Resolve WhatsApp JID PROPERLY
-    const [result] = await sock.onWhatsApp(cleanPhone);
-
-    if (!result || !result.exists) {
-      console.error("❌ Number not on WhatsApp:", cleanPhone);
-      return;
-    }
-
-    const jid = result.jid;
-
-    console.log("📤 Sending WhatsApp message to:", jid);
-
-    // 🔹 Presence update (CRITICAL – prevents silent drops)
-    await sock.sendPresenceUpdate("composing", jid);
-    await new Promise((r) => setTimeout(r, 500));
-
-    // 🔹 Send message with ACK
-    await sock.sendMessage(
-      jid,
-      { text: message },
-      { waitForAck: true }
-    );
-
-    await sock.sendPresenceUpdate("paused", jid);
-
-    console.log("✅ WhatsApp message DELIVERED to:", cleanPhone);
-
-    // 🔹 Mandatory delay
-    await new Promise((r) => setTimeout(r, 2000));
-  } catch (err) {
-    console.error(
-      "❌ WhatsApp send failed",
-      "| phone:",
-      phone,
-      "| error:",
-      err
-    );
+    return response.data;
+  } catch (error) {
+    console.error("DIVINE SEND ERROR:", error.response?.data || error.message);
+    throw error;
   }
 }
