@@ -291,8 +291,10 @@ const Customers: React.FC = () => {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-muted-foreground">
-              This message will be sent to {filteredCustomers.length} customers.
+              This message will be sent to <b>{filteredCustomers.length}</b>{" "}
+              {getTabLabel(activeTab)} customers.
             </p>
+
             <Textarea
               value={notifyMessage}
               onChange={(e) => setNotifyMessage(e.target.value)}
