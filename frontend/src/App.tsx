@@ -20,6 +20,7 @@ import NotFound from "./pages/NotFound";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import NewTask from "./pages/employee/NewTask";
 import MyTasks from "./pages/employee/MyTasks";
+import AllEmployeeTasks from "./pages/employee/AllTasksEmployee"
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -50,6 +51,7 @@ const App = () => (
                   <Route path="dashboard" element={<EmployeeDashboard />} />
                   <Route path="new-task" element={<NewTask />} />
                   <Route path="my-tasks" element={<MyTasks />} />
+                  <Route path="all-tasks" element={<AllEmployeeTasks />} />
                 </Route>
 
                 {/* Admin Routes */}

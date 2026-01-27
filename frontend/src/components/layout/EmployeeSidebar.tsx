@@ -1,12 +1,13 @@
 import React from 'react';
 import { NavLink } from '@/components/NavLink';
-import { LayoutDashboard, PlusCircle, ListTodo } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, ListTodo, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { title: 'Dashboard', url: '/employee/dashboard', icon: LayoutDashboard },
   { title: 'New Task', url: '/employee/new-task', icon: PlusCircle },
   { title: 'My Tasks', url: '/employee/my-tasks', icon: ListTodo },
+  { title: 'All Tasks', url: '/employee/all-tasks', icon: ClipboardList },
 ];
 
 const EmployeeSidebar: React.FC = () => {

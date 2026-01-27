@@ -40,7 +40,7 @@ const MyTasks: React.FC = () => {
   //  const { updateXeroxTask } = useData(); // ✅ getEmployeeTasks removed
 
   const [activeTab, setActiveTab] = useState<"form_filling" | "xerox">(
-    "form_filling"
+    "form_filling",
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<
@@ -71,12 +71,12 @@ const MyTasks: React.FC = () => {
   // Screenshot upload modal
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadingTask, setUploadingTask] = useState<FormFillingTask | null>(
-    null
+    null,
   );
 
   // ✅ Backend task state
   const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>(
-    []
+    [],
   );
   const [xeroxTasks, setXeroxTasks] = useState<XeroxTask[]>([]);
 
@@ -206,7 +206,10 @@ const MyTasks: React.FC = () => {
     return tasks.filter((task) => {
       const matchesSearch =
         task.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.customerPhone.includes(searchQuery);
+        task.customerPhone.includes(searchQuery) ||
+        (task.description || "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase());
 
       const status =
         activeTab === "form_filling"
@@ -222,7 +225,7 @@ const MyTasks: React.FC = () => {
   const totalPages = Math.ceil(filteredTasks.length / ITEMS_PER_PAGE);
   const paginatedTasks = filteredTasks.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    currentPage * ITEMS_PER_PAGE,
   );
 
   const handleEditClick = (task: FormFillingTask | XeroxTask) => {
@@ -249,12 +252,12 @@ const MyTasks: React.FC = () => {
 
       applicationId:
         activeTab === "form_filling"
-          ? (task as FormFillingTask).applicationId ?? ""
+          ? ((task as FormFillingTask).applicationId ?? "")
           : "",
 
       password:
         activeTab === "form_filling"
-          ? (task as FormFillingTask).password ?? ""
+          ? ((task as FormFillingTask).password ?? "")
           : "",
     });
 
@@ -355,6 +358,19 @@ const MyTasks: React.FC = () => {
       });
     }
   };
+
+  const isSearchMatch = (task: FormFillingTask | XeroxTask) => {
+    if (!searchQuery) return false;
+
+    const query = searchQuery.toLowerCase();
+
+    return (
+      task.customerName.toLowerCase().includes(query) ||
+      task.customerPhone.includes(searchQuery) ||
+      (task.description || "").toLowerCase().includes(query)
+    );
+  };
+
   return (
     <div className="space-y-6 pb-20 lg:pb-6">
       <div>
@@ -399,7 +415,7 @@ const MyTasks: React.FC = () => {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <Input
-          placeholder="Search by customer name or phone..."
+          placeholder="Search by customer name or phone or desc..."
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value);
@@ -484,7 +500,14 @@ const MyTasks: React.FC = () => {
                 </TableRow>
               ) : (
                 paginatedTasks.map((task, index) => (
-                  <TableRow key={task.id}>
+                  <TableRow
+                    key={task.id}
+                    className={
+                      isSearchMatch(task)
+                        ? "bg-success/20 hover:bg-success/30 transition-colors"
+                        : ""
+                    }
+                  >
                     <TableCell>
                       {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                     </TableCell>
@@ -504,7 +527,7 @@ const MyTasks: React.FC = () => {
                           <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary capitalize">
                             {(task as FormFillingTask).serviceType?.replace(
                               "_",
-                              " "
+                              " ",
                             )}
                           </span>
                         )}
