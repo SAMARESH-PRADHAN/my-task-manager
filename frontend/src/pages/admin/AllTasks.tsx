@@ -76,7 +76,7 @@ const AllTasks: React.FC = () => {
   const [editingFormTask, setEditingFormTask] =
     useState<FormFillingTask | null>(null);
   const [editingXeroxTask, setEditingXeroxTask] = useState<XeroxTask | null>(
-    null
+    null,
   );
 
   // Delete confirmation
@@ -94,7 +94,10 @@ const AllTasks: React.FC = () => {
         (task.customerName ?? "")
           .toLowerCase()
           .includes(searchQuery.toLowerCase()) ||
-        (task.customerPhone ?? "").includes(searchQuery);
+        (task.customerPhone ?? "").includes(searchQuery) ||
+        (task.description ?? "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase());
 
       if (!matchesSearch) return false;
 
@@ -120,7 +123,10 @@ const AllTasks: React.FC = () => {
       // Search filter
       const matchesSearch =
         task.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.customerPhone.includes(searchQuery);
+        task.customerPhone.includes(searchQuery) ||
+        (task.description ?? "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase());
       if (!matchesSearch) return false;
 
       // Date filter
@@ -152,7 +158,7 @@ const AllTasks: React.FC = () => {
   }, [totalPages]);
   const paginatedTasks = currentTasks.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    currentPage * ITEMS_PER_PAGE,
   );
 
   const handleDownload = () => {
@@ -195,7 +201,7 @@ const AllTasks: React.FC = () => {
 
   const handleFormTaskAmountChange = (
     field: "amount" | "deductionAmount",
-    value: number
+    value: number,
   ) => {
     if (!editingFormTask) return;
     const newTask = { ...editingFormTask, [field]: value };
@@ -205,7 +211,7 @@ const AllTasks: React.FC = () => {
 
   const handleXeroxTaskAmountChange = (
     field: "amount" | "deductionAmount",
-    value: number
+    value: number,
   ) => {
     if (!editingXeroxTask) return;
     const newTask = { ...editingXeroxTask, [field]: value };
@@ -263,6 +269,18 @@ const AllTasks: React.FC = () => {
         behavior: "smooth",
       });
     }
+  };
+
+  const isSearchMatch = (task: FormFillingTask | XeroxTask) => {
+    if (!searchQuery) return false;
+
+    const query = searchQuery.toLowerCase();
+
+    return (
+      task.customerName.toLowerCase().includes(query) ||
+      task.customerPhone.includes(searchQuery) ||
+      (task.description || "").toLowerCase().includes(query)
+    );
   };
 
   return (
@@ -328,7 +346,7 @@ const AllTasks: React.FC = () => {
       <div className="flex flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-4 items-center">
           <Input
-            placeholder="Search by customer name or phone..."
+            placeholder="Search by customer name or phone or description..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -407,7 +425,14 @@ const AllTasks: React.FC = () => {
                     </TableRow>
                   ) : (
                     (paginatedTasks as FormFillingTask[]).map((task, index) => (
-                      <TableRow key={task.id}>
+                      <TableRow
+                        key={task.id}
+                        className={
+                          isSearchMatch(task)
+                            ? "bg-orange-100 dark:bg-orange-900/40 border-l-4 border-orange-500"
+                            : ""
+                        }
+                      >
                         <TableCell>
                           {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                         </TableCell>
@@ -428,7 +453,7 @@ const AllTasks: React.FC = () => {
                             <span className="inline-block mt-1 px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary capitalize">
                               {(task.serviceType ?? "unknown").replace(
                                 "_",
-                                " "
+                                " ",
                               )}
                             </span>
                           </div>
@@ -458,10 +483,10 @@ const AllTasks: React.FC = () => {
                             </p>
                           </div>
                         </TableCell>
-                         <TableCell className="max-w-[150px] truncate">
+                        <TableCell className="max-w-[150px] truncate">
                           {task.description || "-"}
                         </TableCell>
-                         <TableCell>
+                        <TableCell>
                           <span
                             className={`px-2 py-1 rounded-full text-xs ${
                               task.workStatus === "completed"
@@ -488,8 +513,7 @@ const AllTasks: React.FC = () => {
                         <TableCell className="font-semibold text-primary">
                           ₹{task.revenue || task.amount}
                         </TableCell>
-                       
-                       
+
                         <TableCell>
                           {formatToIST(task.createdAt, "dd/MM/yyyy HH:mm")}
                         </TableCell>
@@ -552,7 +576,14 @@ const AllTasks: React.FC = () => {
                     </TableRow>
                   ) : (
                     (paginatedTasks as XeroxTask[]).map((task, index) => (
-                      <TableRow key={task.id}>
+                      <TableRow
+                        key={task.id}
+                        className={
+                          isSearchMatch(task)
+                            ? "bg-orange-100 dark:bg-orange-900/40 border-l-4 border-orange-500"
+                            : ""
+                        }
+                      >
                         <TableCell>
                           {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                         </TableCell>
