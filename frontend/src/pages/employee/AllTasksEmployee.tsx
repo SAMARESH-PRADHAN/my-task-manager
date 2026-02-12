@@ -271,6 +271,18 @@ const AllTasksEmployee: React.FC = () => {
     }
   };
 
+  const isSearchMatch = (task: FormFillingTask | XeroxTask) => {
+    if (!searchQuery) return false;
+
+    const query = searchQuery.toLowerCase();
+
+    return (
+      task.customerName.toLowerCase().includes(query) ||
+      task.customerPhone.includes(searchQuery) ||
+      (task.description || "").toLowerCase().includes(query)
+    );
+  };
+
   return (
     <div className="space-y-6 pb-20 lg:pb-6">
       <div>
@@ -334,7 +346,7 @@ const AllTasksEmployee: React.FC = () => {
       <div className="flex flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-4 items-center">
           <Input
-            placeholder="Search by customer name or phone..."
+            placeholder="Search by customer name or phone or description..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -413,7 +425,14 @@ const AllTasksEmployee: React.FC = () => {
                     </TableRow>
                   ) : (
                     (paginatedTasks as FormFillingTask[]).map((task, index) => (
-                      <TableRow key={task.id}>
+                      <TableRow
+                        key={task.id}
+                        className={
+                          isSearchMatch(task)
+                            ? "bg-orange-100 dark:bg-orange-900/40 border-l-4 border-orange-500"
+                            : ""
+                        }
+                      >
                         <TableCell>
                           {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                         </TableCell>
@@ -557,7 +576,14 @@ const AllTasksEmployee: React.FC = () => {
                     </TableRow>
                   ) : (
                     (paginatedTasks as XeroxTask[]).map((task, index) => (
-                      <TableRow key={task.id}>
+                      <TableRow
+                        key={task.id}
+                        className={
+                          isSearchMatch(task)
+                            ? "bg-orange-100 dark:bg-orange-900/40 border-l-4 border-orange-500"
+                            : ""
+                        }
+                      >
                         <TableCell>
                           {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                         </TableCell>
