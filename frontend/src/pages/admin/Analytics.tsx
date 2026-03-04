@@ -98,7 +98,7 @@ const Analytics: React.FC = () => {
         value: govSchemeCount,
         color: "hsl(var(--chart-3))",
       },
-      { name: "Xerox/Other", value: xeroxCount, color: "hsl(var(--chart-4))" },
+      { name: "Offline Work", value: xeroxCount, color: "hsl(var(--chart-4))" },
     ];
   }, [filteredData]);
 
@@ -122,7 +122,7 @@ const Analytics: React.FC = () => {
       { name: "Job Seeker", revenue: jobSeekerRevenue },
       { name: "Student", revenue: studentRevenue },
       { name: "Gov Scheme", revenue: govSchemeRevenue },
-      { name: "Xerox/Other", revenue: xeroxRevenue },
+      { name: "Offline work", revenue: xeroxRevenue },
     ];
   }, [filteredData]);
 
@@ -300,7 +300,7 @@ const Analytics: React.FC = () => {
         </Card>
         <Card className="shadow-card">
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Form Filling</p>
+            <p className="text-sm text-muted-foreground">Online Task</p>
             <p className="text-3xl font-bold text-foreground">
               {filteredData.formFilling.length}
             </p>
@@ -308,7 +308,7 @@ const Analytics: React.FC = () => {
         </Card>
         <Card className="shadow-card">
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Xerox/Other</p>
+            <p className="text-sm text-muted-foreground">Offline Task</p>
             <p className="text-3xl font-bold text-foreground">
               {filteredData.xerox.length}
             </p>
@@ -339,9 +339,9 @@ const Analytics: React.FC = () => {
 
                       const label =
                         key === "formFilling"
-                          ? "Form Filling"
+                          ? "Online Work"
                           : key === "xerox"
-                          ? "Xerox / Other"
+                          ? "Offline Work"
                           : key;
 
                       return [`₹${value}`, label];
@@ -356,14 +356,14 @@ const Analytics: React.FC = () => {
                   <Line
                     type="monotone"
                     dataKey="formFilling"
-                    name="Form Filling"
+                    name="Online Work"
                     stroke="hsl(var(--chart-1))"
                     strokeWidth={2}
                   />
                   <Line
                     type="monotone"
                     dataKey="xerox"
-                    name="Xerox/Other"
+                    name="Offline Work"
                     stroke="hsl(var(--chart-2))"
                     strokeWidth={2}
                   />
@@ -477,9 +477,9 @@ const Analytics: React.FC = () => {
 
                       const label =
                         key === "formFilling"
-                          ? "Form Filling"
+                          ? "Online Work"
                           : key === "xerox"
-                          ? "Xerox / Other"
+                          ? "Offline work"
                           : key;
 
                       return [`₹${value}`, label];
@@ -493,13 +493,13 @@ const Analytics: React.FC = () => {
                   <Legend />
                   <Bar
                     dataKey="formFilling"
-                    name="Form Filling"
+                    name="Online Work"
                     stackId="a"
                     fill="hsl(var(--chart-1))"
                   />
                   <Bar
                     dataKey="xerox"
-                    name="Xerox/Other"
+                    name="Offline Work"
                     stackId="a"
                     fill="hsl(var(--chart-2))"
                   />
