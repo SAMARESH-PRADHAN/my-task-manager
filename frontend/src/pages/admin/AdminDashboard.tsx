@@ -90,7 +90,7 @@ const AdminDashboard: React.FC = () => {
     { name: "Job Seeker", value: jobSeekerCount, color: "hsl(var(--chart-1))" },
     { name: "Student", value: studentCount, color: "hsl(var(--chart-2))" },
     { name: "Gov Scheme", value: govSchemeCount, color: "hsl(var(--chart-3))" },
-    { name: "Xerox/Other", value: xeroxCount, color: "hsl(var(--chart-4))" },
+    { name: "Offline Work", value: xeroxCount, color: "hsl(var(--chart-4))" },
   ];
 
   // Revenue by service type (using revenue field)
@@ -123,7 +123,7 @@ const AdminDashboard: React.FC = () => {
       revenue: govSchemeRevenue,
       fill: "hsl(var(--chart-3))",
     },
-    { name: "Xerox/Other", revenue: xeroxRevenue, fill: "hsl(var(--chart-4))" },
+    { name: "Offline Work", revenue: xeroxRevenue, fill: "hsl(var(--chart-4))" },
   ];
 
   // Employee performance (by revenue)
@@ -299,7 +299,7 @@ const AdminDashboard: React.FC = () => {
               <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                 <Copy className="h-5 w-5 text-chart-4" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Xerox/Other</p>
+                  <p className="text-sm text-muted-foreground">Offline Work</p>
                   <p className="font-semibold">{xeroxCount}</p>
                 </div>
               </div>

@@ -58,13 +58,13 @@ const EmployeeDashboard: React.FC = () => {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Today's Form Filling"
+          title="Today's Online work"
           value={todayFormFilling.length}
           icon={FileText}
           iconClassName="bg-primary"
         />
         <StatCard
-          title="Today's Xerox/Other"
+          title="Today's Offline Work"
           value={todayXerox.length}
           icon={Copy}
           iconClassName="bg-accent"
@@ -86,12 +86,12 @@ const EmployeeDashboard: React.FC = () => {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-lg">Recent Form Filling Tasks</CardTitle>
+            <CardTitle className="text-lg">Recent Online Tasks</CardTitle>
           </CardHeader>
           <CardContent>
             {todayFormFilling.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
-                No form filling tasks for today
+                No Online tasks for today
               </p>
             ) : (
               <div className="space-y-4">
@@ -125,12 +125,12 @@ const EmployeeDashboard: React.FC = () => {
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-lg">Recent Xerox/Other Tasks</CardTitle>
+            <CardTitle className="text-lg">Recent Offline Tasks</CardTitle>
           </CardHeader>
           <CardContent>
             {todayXerox.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
-                No xerox/other tasks for today
+                No Offline tasks for today
               </p>
             ) : (
               <div className="space-y-4">

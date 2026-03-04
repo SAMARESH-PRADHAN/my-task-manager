@@ -394,7 +394,7 @@ const MyTasks: React.FC = () => {
               : ""
           }
         >
-          Form Filling
+          Online Service
         </Button>
         <Button
           variant={activeTab === "xerox" ? "default" : "outline"}
@@ -408,7 +408,7 @@ const MyTasks: React.FC = () => {
               : ""
           }
         >
-          Xerox/Printing/Passport Photo/Other Service
+          Offline Service
         </Button>
       </div>
 

@@ -34,7 +34,7 @@ const NewTask: React.FC = () => {
   // Service selection
   const [serviceType, setServiceType] = useState<ServiceType | "">("");
   const [formServiceType, setFormServiceType] = useState<FormServiceType | "">(
-    ""
+    "",
   );
 
   // Form filling specific
@@ -60,13 +60,13 @@ const NewTask: React.FC = () => {
 
     if (!customerName || !customerPhone || !serviceType) {
       toast.error(
-        "Please fill all required fields (Customer Name, Phone, Service Type)"
+        "Please fill all required fields (Customer Name, Phone, Service Type)",
       );
       return;
     }
 
     if (serviceType === "form_filling" && !formServiceType) {
-      toast.error("Please select form service type");
+      toast.error("Please select Online service type");
       return;
     }
 
@@ -147,7 +147,9 @@ const NewTask: React.FC = () => {
                 <Input
                   id="customerName"
                   value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
+                  onChange={(e) =>
+                    setCustomerName(e.target.value.toUpperCase())
+                  }
                   placeholder="Enter customer name"
                   required
                 />
@@ -206,9 +208,9 @@ const NewTask: React.FC = () => {
                   <SelectValue placeholder="Select service type" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border border-border z-50">
-                  <SelectItem value="form_filling">Form Filling</SelectItem>
+                  <SelectItem value="form_filling">Online Work</SelectItem>
                   <SelectItem value="xerox">
-                    Xerox / Printing / Other
+                    Offline Work
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -217,7 +219,7 @@ const NewTask: React.FC = () => {
             {serviceType === "form_filling" && (
               <>
                 <div className="space-y-2">
-                  <Label>Form Service Type *</Label>
+                  <Label>Online Service Type *</Label>
                   <Select
                     value={formServiceType}
                     onValueChange={(value) =>
@@ -225,7 +227,7 @@ const NewTask: React.FC = () => {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select form service type" />
+                      <SelectValue placeholder="Select Online service type" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border border-border z-50">
                       <SelectItem value="job_seeker">Job Seeker</SelectItem>

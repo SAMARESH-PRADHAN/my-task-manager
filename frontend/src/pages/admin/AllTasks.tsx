@@ -180,7 +180,7 @@ const AllTasks: React.FC = () => {
         Description: task.description.replace(/\n/g, " "),
         Date: formatToIST(task.createdAt, "dd/MM/yyyy HH:mm"),
       }));
-      downloadExcel(data, "form_filling_tasks");
+      downloadExcel(data, "online_tasks");
     } else {
       const data = filteredXeroxTasks.map((task, index) => ({
         "Serial No": index + 1,
@@ -305,7 +305,7 @@ const AllTasks: React.FC = () => {
               : ""
           }
         >
-          Form Filling
+          Online Service
         </Button>
         <Button
           variant={activeTab === "xerox" ? "default" : "outline"}
@@ -320,7 +320,7 @@ const AllTasks: React.FC = () => {
               : ""
           }
         >
-          Xerox/Printing/Passport Photo/Other Service
+          Offline Service
         </Button>
       </div>
 
@@ -676,7 +676,7 @@ const AllTasks: React.FC = () => {
       >
         <DialogContent className="bg-card border border-border max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Form Filling Task</DialogTitle>
+            <DialogTitle>Edit Online Task</DialogTitle>
           </DialogHeader>
           {editingFormTask && (
             <div className="space-y-4">
@@ -882,7 +882,7 @@ const AllTasks: React.FC = () => {
       >
         <DialogContent className="bg-card border border-border max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Xerox Task</DialogTitle>
+            <DialogTitle>Edit Offline Task</DialogTitle>
           </DialogHeader>
           {editingXeroxTask && (
             <div className="space-y-4">

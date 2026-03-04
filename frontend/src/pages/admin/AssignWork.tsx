@@ -231,7 +231,7 @@ const AssignWork: React.FC = () => {
                 <Input
                   id="customerName"
                   value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
+                  onChange={(e) => setCustomerName(e.target.value.toUpperCase())}
                   placeholder="Enter customer name"
                   required
                 />
@@ -290,9 +290,9 @@ const AssignWork: React.FC = () => {
                   <SelectValue placeholder="Select service type" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border border-border z-50">
-                  <SelectItem value="form_filling">Form Filling</SelectItem>
+                  <SelectItem value="form_filling">Online Service</SelectItem>
                   <SelectItem value="xerox">
-                    Xerox/Printing/Passport Photo/Other Service
+                    Offline Service
                   </SelectItem>
                 </SelectContent>
               </Select>
