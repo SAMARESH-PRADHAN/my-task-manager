@@ -8,6 +8,8 @@ import {
   FileText,
   Clock,
   IndianRupee,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import {
   useData,
@@ -67,6 +69,14 @@ const Employees: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Month/year selector state — defaults to current month/year
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+
+  // Card quick filter — affects task counts shown on employee cards
+  const [cardFilter, setCardFilter] = useState<"all" | "daily" | "monthly">("all");
+
   // Add employee modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
@@ -90,6 +100,7 @@ const Employees: React.FC = () => {
     "all" | "form_filling" | "xerox"
   >("all");
   const [taskPage, setTaskPage] = useState(1);
+  const [taskQuickFilter, setTaskQuickFilter] = useState<"all" | "daily" | "monthly">("all");
 
   const filteredEmployees = employees.filter(
     (emp) =>
@@ -112,23 +123,61 @@ const Employees: React.FC = () => {
       .toUpperCase();
   };
 
-  // Get employee stats
+  // Get employee stats — revenue based on selected month/year, counts based on cardFilter
   const getEmployeeStats = (employeeId: string) => {
-    const empFormFilling = formFillingTasks.filter(
-      (t) => t.employeeId === employeeId
-    );
+    const prevMonthDate = new Date(selectedYear, selectedMonth - 1, 1);
+    const prevMonth = prevMonthDate.getMonth();
+    const prevMonthYear = prevMonthDate.getFullYear();
+
+    const isSelectedMonth = (dateStr: string) => {
+      const d = new Date(dateStr);
+      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+    };
+
+    const isPrevMonth = (dateStr: string) => {
+      const d = new Date(dateStr);
+      return d.getMonth() === prevMonth && d.getFullYear() === prevMonthYear;
+    };
+
+    // Filter by cardFilter for task counts
+    const isInCardFilter = (dateStr: string) => {
+      const d = new Date(dateStr);
+      const today = new Date();
+      if (cardFilter === "daily") {
+        return (
+          d.getDate() === today.getDate() &&
+          d.getMonth() === today.getMonth() &&
+          d.getFullYear() === today.getFullYear()
+        );
+      }
+      if (cardFilter === "monthly") {
+        return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+      }
+      return true; // "all"
+    };
+
+    const empFormFilling = formFillingTasks.filter((t) => t.employeeId === employeeId);
     const empXerox = xeroxTasks.filter((t) => t.employeeId === employeeId);
 
-    const totalTasks = empFormFilling.length + empXerox.length;
-    const pendingTasks =
-      empFormFilling.filter(
-        (t) => t.workStatus === "pending" || t.paymentStatus === "pending"
-      ).length + empXerox.filter((t) => t.paymentStatus === "pending").length;
-    const totalRevenue =
-      empFormFilling.reduce((sum, t) => sum + t.revenue, 0) +
-      empXerox.reduce((sum, t) => sum + t.revenue, 0);
+    // Task counts respect cardFilter
+    const filteredFF = empFormFilling.filter((t) => isInCardFilter(t.createdAt));
+    const filteredXerox = empXerox.filter((t) => isInCardFilter(t.createdAt));
 
-    return { totalTasks, pendingTasks, totalRevenue };
+    const totalTasks = filteredFF.length + filteredXerox.length;
+    const pendingTasks =
+      filteredFF.filter((t) => t.workStatus === "pending" || t.paymentStatus === "pending").length +
+      filteredXerox.filter((t) => t.paymentStatus === "pending").length;
+
+    // Revenue always uses selected month/year
+    const thisMonthRevenue =
+      empFormFilling.filter((t) => isSelectedMonth(t.createdAt)).reduce((sum, t) => sum + t.revenue, 0) +
+      empXerox.filter((t) => isSelectedMonth(t.createdAt)).reduce((sum, t) => sum + t.revenue, 0);
+
+    const lastMonthRevenue =
+      empFormFilling.filter((t) => isPrevMonth(t.createdAt)).reduce((sum, t) => sum + t.revenue, 0) +
+      empXerox.filter((t) => isPrevMonth(t.createdAt)).reduce((sum, t) => sum + t.revenue, 0);
+
+    return { totalTasks, pendingTasks, thisMonthRevenue, lastMonthRevenue };
   };
 
   const handleAddEmployee = () => {
@@ -175,8 +224,30 @@ const Employees: React.FC = () => {
     );
     let xerox = xeroxTasks.filter((t) => t.employeeId === employeeId);
 
-    // Apply date filter
-    if (taskFromDate && taskToDate) {
+    // Quick filter: daily or monthly
+    const today = new Date();
+    if (taskQuickFilter === "daily") {
+      const start = startOfDay(today);
+      const end = endOfDay(today);
+      formFilling = formFilling.filter((t) =>
+        isWithinInterval(new Date(t.createdAt), { start, end })
+      );
+      xerox = xerox.filter((t) =>
+        isWithinInterval(new Date(t.createdAt), { start, end })
+      );
+    } else if (taskQuickFilter === "monthly") {
+      formFilling = formFilling.filter((t) => {
+        const d = new Date(t.createdAt);
+        return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+      });
+      xerox = xerox.filter((t) => {
+        const d = new Date(t.createdAt);
+        return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+      });
+    }
+
+    // Apply custom date filter (only when not using quick filter)
+    if (taskQuickFilter === "all" && taskFromDate && taskToDate) {
       formFilling = formFilling.filter((t) =>
         isWithinInterval(new Date(t.createdAt), {
           start: startOfDay(taskFromDate),
@@ -200,28 +271,6 @@ const Employees: React.FC = () => {
     if (!viewingEmployee) return;
 
     const tasks = getEmployeeTasks(viewingEmployee.id);
-    // const allTasks = [
-    //   ...tasks.formFilling.map((t) => ({
-    //     'Serial No': t.id,
-    //     'Customer Name': t.customerName,
-    //     'Phone': t.customerPhone,
-    //     'Service Type': t.serviceType,
-    //     'Amount': t.amount,
-    //     'Work Status': t.workStatus,
-    //     'Payment Status': t.paymentStatus,
-    //     'Date': format(new Date(t.createdAt), 'dd/MM/yyyy HH:mm'),
-    //   })),
-    //   ...tasks.xerox.map((t) => ({
-    //     'Serial No': t.id,
-    //     'Customer Name': t.customerName,
-    //     'Phone': t.customerPhone,
-    //     'Service Type': 'Xerox/Other',
-    //     'Amount': t.amount,
-    //     'Work Status': 'N/A',
-    //     'Payment Status': t.paymentStatus,
-    //     'Date': format(new Date(t.createdAt), 'dd/MM/yyyy HH:mm'),
-    //   })),
-    // ];
     const mergedTasks = [
       ...tasks.formFilling.map((t) => ({
         customerName: t.customerName,
@@ -243,9 +292,8 @@ const Employees: React.FC = () => {
       })),
     ];
 
-    // 👉 Now add Serial No manually
     const allTasks = mergedTasks.map((task, index) => ({
-      "Serial No": index + 1, // ✅ STARTS FROM 1
+      "Serial No": index + 1,
       "Customer Name": task.customerName,
       Phone: task.customerPhone,
       "Service Type": task.serviceType,
@@ -258,6 +306,17 @@ const Employees: React.FC = () => {
     downloadExcel(allTasks, `${viewingEmployee.name}_tasks`);
     toast.success("Tasks exported successfully!");
   };
+
+  // Label for the selected month shown on cards
+  const selectedMonthLabel = new Date(selectedYear, selectedMonth).toLocaleString(
+    "default",
+    { month: "short" }
+  );
+
+  // Label for previous month shown on cards
+  const prevMonthDate = new Date(selectedYear, selectedMonth - 1, 1);
+  const prevMonthLabel = prevMonthDate.toLocaleString("default", { month: "short" });
+  const prevMonthYear = prevMonthDate.getFullYear();
 
   return (
     <div className="space-y-6 pb-20 lg:pb-6">
@@ -285,9 +344,70 @@ const Employees: React.FC = () => {
         className="max-w-sm"
       />
 
+      {/* Task count filter + Month/Year revenue selector */}
+      <div className="flex flex-wrap items-center gap-4">
+        {/* Quick filter for task counts on cards */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground font-medium">Tasks:</span>
+          {(["all", "daily", "monthly"] as const).map((f) => (
+            <Button
+              key={f}
+              size="sm"
+              variant={cardFilter === f ? "default" : "outline"}
+              className={cardFilter === f ? "gradient-primary text-primary-foreground" : ""}
+              onClick={() => setCardFilter(f)}
+            >
+              {f === "all" ? "All Time" : f === "daily" ? "Today" : "This Month"}
+            </Button>
+          ))}
+        </div>
+
+        {/* Divider */}
+        <div className="h-6 w-px bg-border hidden sm:block" />
+
+        {/* Month/Year selector for revenue */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground font-medium">Revenue:</span>
+          <Select
+            value={String(selectedMonth)}
+            onValueChange={(v) => setSelectedMonth(Number(v))}
+          >
+            <SelectTrigger className="w-[130px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover border border-border z-50">
+              {Array.from({ length: 12 }, (_, i) => (
+                <SelectItem key={i} value={String(i)}>
+                  {new Date(2000, i).toLocaleString("default", { month: "long" })}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={String(selectedYear)}
+            onValueChange={(v) => setSelectedYear(Number(v))}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover border border-border z-50">
+              {Array.from({ length: 3 }, (_, i) => {
+                const year = new Date().getFullYear() - i;
+                return (
+                  <SelectItem key={year} value={String(year)}>
+                    {year}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {paginatedEmployees.map((employee) => {
           const stats = getEmployeeStats(employee.id);
+          const diff = stats.thisMonthRevenue - stats.lastMonthRevenue;
           return (
             <Card key={employee.id} className="shadow-card animate-slide-up">
               <CardContent className="p-6">
@@ -332,6 +452,9 @@ const Employees: React.FC = () => {
                       <DropdownMenuItem
                         onClick={() => {
                           setViewingEmployee(employee);
+                          setTaskQuickFilter("all");
+                          setTaskFromDate(undefined);
+                          setTaskToDate(undefined);
                           setIsViewTasksModalOpen(true);
                         }}
                       >
@@ -343,32 +466,64 @@ const Employees: React.FC = () => {
                 </div>
 
                 {/* Employee Stats */}
-                <div className="mt-4 pt-4 border-t border-border grid grid-cols-3 gap-2">
+                <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-2">
+                  {/* Total Tasks */}
                   <div className="flex flex-col items-center p-2 bg-muted/50 rounded-lg">
                     <FileText className="h-4 w-4 text-primary mb-1" />
                     <span className="text-lg font-bold text-foreground">
                       {stats.totalTasks}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      Total Tasks
+                      {cardFilter === "daily" ? "Today's Tasks" : cardFilter === "monthly" ? "Month's Tasks" : "Total Tasks"}
                     </span>
                   </div>
+
+                  {/* Pending */}
                   <div className="flex flex-col items-center p-2 bg-muted/50 rounded-lg">
                     <Clock className="h-4 w-4 text-warning mb-1" />
                     <span className="text-lg font-bold text-foreground">
                       {stats.pendingTasks}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      Pending
+                      {cardFilter === "daily" ? "Today's Pending" : cardFilter === "monthly" ? "Month's Pending" : "Pending"}
                     </span>
                   </div>
+
+                  {/* Selected month revenue with trend */}
                   <div className="flex flex-col items-center p-2 bg-muted/50 rounded-lg">
-                    <IndianRupee className="h-4 w-4 text-success mb-1" />
+                    <div className="flex items-center gap-1 mb-1">
+                      <IndianRupee className="h-4 w-4 text-success" />
+                      {diff > 0 ? (
+                        <TrendingUp className="h-3 w-3 text-success" />
+                      ) : diff < 0 ? (
+                        <TrendingDown className="h-3 w-3 text-destructive" />
+                      ) : null}
+                    </div>
                     <span className="text-lg font-bold text-foreground">
-                      ₹{stats.totalRevenue}
+                      ₹{stats.thisMonthRevenue}
+                    </span>
+                    {diff !== 0 && (
+                      <span
+                        className={`text-xs font-medium ${
+                          diff > 0 ? "text-success" : "text-destructive"
+                        }`}
+                      >
+                        {diff > 0 ? "+" : ""}₹{diff}
+                      </span>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {selectedMonthLabel} {selectedYear}
+                    </span>
+                  </div>
+
+                  {/* Previous month revenue */}
+                  <div className="flex flex-col items-center p-2 bg-muted/50 rounded-lg">
+                    <IndianRupee className="h-4 w-4 text-muted-foreground mb-1" />
+                    <span className="text-lg font-bold text-foreground">
+                      ₹{stats.lastMonthRevenue}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      Revenue
+                      {prevMonthLabel} {prevMonthYear !== selectedYear ? prevMonthYear : ""}
                     </span>
                   </div>
                 </div>
@@ -566,13 +721,37 @@ const Employees: React.FC = () => {
             <DialogTitle>{viewingEmployee?.name}'s Tasks</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Quick filter buttons */}
+            <div className="flex gap-2">
+              {(["all", "daily", "monthly"] as const).map((f) => (
+                <Button
+                  key={f}
+                  size="sm"
+                  variant={taskQuickFilter === f ? "default" : "outline"}
+                  className={taskQuickFilter === f ? "gradient-primary text-primary-foreground" : ""}
+                  onClick={() => {
+                    setTaskQuickFilter(f);
+                    // clear custom date range when picking a quick filter
+                    if (f !== "all") {
+                      setTaskFromDate(undefined);
+                      setTaskToDate(undefined);
+                    }
+                  }}
+                >
+                  {f === "all" ? "All Time" : f === "daily" ? "Today" : "This Month"}
+                </Button>
+              ))}
+            </div>
+
             <div className="flex flex-wrap gap-4 items-center">
-              <DateFilter
-                fromDate={taskFromDate}
-                toDate={taskToDate}
-                onFromDateChange={setTaskFromDate}
-                onToDateChange={setTaskToDate}
-              />
+              <div className={taskQuickFilter !== "all" ? "opacity-40 pointer-events-none" : ""}>
+                <DateFilter
+                  fromDate={taskFromDate}
+                  toDate={taskToDate}
+                  onFromDateChange={(d) => { setTaskFromDate(d); setTaskQuickFilter("all"); }}
+                  onToDateChange={(d) => { setTaskToDate(d); setTaskQuickFilter("all"); }}
+                />
+              </div>
               <Select
                 value={taskServiceType}
                 onValueChange={(value) => setTaskServiceType(value as any)}
@@ -591,6 +770,32 @@ const Employees: React.FC = () => {
                 Download Excel
               </Button>
             </div>
+
+            {viewingEmployee && (() => {
+              const tasks = getEmployeeTasks(viewingEmployee.id);
+              const total = tasks.formFilling.length + tasks.xerox.length;
+              const revenue =
+                tasks.formFilling.reduce((s, t) => s + t.revenue, 0) +
+                tasks.xerox.reduce((s, t) => s + t.revenue, 0);
+              const label =
+                taskQuickFilter === "daily"
+                  ? "Today"
+                  : taskQuickFilter === "monthly"
+                  ? "This Month"
+                  : "Filtered";
+              return (
+                <div className="flex gap-4 text-sm">
+                  <span className="text-muted-foreground">
+                    {label}:{" "}
+                    <span className="font-semibold text-foreground">{total} tasks</span>
+                  </span>
+                  <span className="text-muted-foreground">
+                    Revenue:{" "}
+                    <span className="font-semibold text-primary">₹{revenue.toFixed(2)}</span>
+                  </span>
+                </div>
+              );
+            })()}
 
             {viewingEmployee && (
               <div className="overflow-x-auto">

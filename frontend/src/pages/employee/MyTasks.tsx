@@ -37,7 +37,6 @@ const ITEMS_PER_PAGE = 10;
 
 const MyTasks: React.FC = () => {
   const { user } = useAuth();
-  //  const { updateXeroxTask } = useData(); // ✅ getEmployeeTasks removed
 
   const [activeTab, setActiveTab] = useState<"form_filling" | "xerox">(
     "form_filling",
@@ -74,10 +73,8 @@ const MyTasks: React.FC = () => {
     null,
   );
 
-  // ✅ Backend task state
-  const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>(
-    [],
-  );
+  // Backend task state
+  const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>([]);
   const [xeroxTasks, setXeroxTasks] = useState<XeroxTask[]>([]);
 
   const fetchMyTasks = async () => {
@@ -99,8 +96,7 @@ const MyTasks: React.FC = () => {
           revenue: Number(t.revenue || 0),
           description: t.description || "",
           paymentMode: t.payment_mode || "",
-          paymentStatus:
-            t.payment_status === "unpaid" ? "pending" : t.payment_status,
+          paymentStatus: t.payment_status === "unpaid" ? "pending" : t.payment_status,
           createdAt: t.created_at,
         };
 
@@ -114,9 +110,17 @@ const MyTasks: React.FC = () => {
             applicationId: t.application_id || "",
             password: t.application_password || "",
             workStatus: t.work_status,
+            completedById: t.completed_by ? String(t.completed_by) : undefined,
+            completedByName: t.completed_by_name ?? undefined,
           });
         } else {
-          xx.push(base as XeroxTask);
+          xx.push({
+            ...base,
+            employeeId: String(t.employee_id),
+            employeeName: user?.name || "",
+            completedById: t.completed_by ? String(t.completed_by) : undefined,
+            completedByName: t.completed_by_name ?? undefined,
+          } as XeroxTask);
         }
       });
 
@@ -127,71 +131,12 @@ const MyTasks: React.FC = () => {
       toast.error("Failed to load tasks");
     }
   };
-  // useEffect(() => {
-  //   console.log("USER IN MYTASKS:", user);
-  //   if (!user) return;
-  //   fetchMyTasks();
-  // }, [user]);
 
-  // ✅ FETCH TASKS FROM BACKEND
   useEffect(() => {
     if (!user) return;
-
-    const fetchMyTasks = async () => {
-      try {
-        const res = await api.get("/tasks/my");
-
-        const ff: FormFillingTask[] = [];
-        const xx: XeroxTask[] = [];
-
-        res.data.forEach((t: any) => {
-          const base = {
-            id: String(t.id),
-            customerId: String(t.customer_id),
-            customerName: t.customer_name || "",
-            customerPhone: t.customer_phone || "",
-            customerEmail: t.customer_email || "",
-            amount: Number(t.total_amount || 0),
-            deductionAmount: Number(t.deduction_amount || 0),
-            revenue: Number(t.revenue || 0),
-            description: t.description || "",
-            paymentMode: t.payment_mode || "",
-            paymentStatus: t.payment_status,
-            createdAt: t.created_at,
-          };
-
-          if (t.service_type === "form_filling") {
-            ff.push({
-              ...base,
-
-              // ✅ required by FormFillingTask
-              customerType: t.customer_type || "",
-              employeeId: String(t.employee_id),
-              employeeName: user?.name || "",
-
-              // ✅ form filling specific
-              serviceType: t.form_service_type,
-              applicationId: t.application_id || "",
-              password: t.application_password || "",
-              workStatus: t.work_status,
-            });
-          } else {
-            xx.push(base as XeroxTask);
-          }
-        });
-
-        setFormFillingTasks(ff);
-        setXeroxTasks(xx);
-      } catch (err) {
-        console.error("FETCH MY TASKS ERROR", err);
-        toast.error("Failed to load tasks");
-      }
-    };
-
     fetchMyTasks();
   }, [user]);
 
-  // ✅ unified task source
   const employeeTasks = {
     formFilling: formFillingTasks,
     xerox: xeroxTasks,
@@ -230,76 +175,52 @@ const MyTasks: React.FC = () => {
 
   const handleEditClick = (task: FormFillingTask | XeroxTask) => {
     setEditingTask(task);
-
     setEditFormData({
       customerName: task.customerName,
       customerPhone: task.customerPhone,
       customerEmail: task.customerEmail,
-
       description: task.description,
       amount: task.amount,
       deductionAmount: task.deductionAmount || 0,
       revenue: task.revenue || task.amount,
-
       paymentMode: task.paymentMode,
       paymentStatus:
         task.paymentStatus === "unpaid" ? "pending" : task.paymentStatus,
-
       serviceType:
         activeTab === "form_filling"
           ? (task as FormFillingTask).serviceType
           : "job_seeker",
-
       applicationId:
         activeTab === "form_filling"
           ? ((task as FormFillingTask).applicationId ?? "")
           : "",
-
       password:
         activeTab === "form_filling"
           ? ((task as FormFillingTask).password ?? "")
           : "",
     });
-
     setIsEditModalOpen(true);
   };
-
-  // const handleAmountChange = (
-  //   field: "amount" | "deductionAmount",
-  //   value: number
-  // ) => {
-  //   const newData = { ...editFormData, [field]: value };
-  //   newData.revenue = newData.amount - newData.deductionAmount;
-  //   setEditFormData(newData);
-  // };
 
   const handleUpdateTask = async () => {
     if (!editingTask) return;
 
     try {
       await api.put(`/tasks/${editingTask.id}`, {
-        /* ================= TASK TABLE ================= */
         description: editFormData.description,
-
         total_amount: Number(editFormData.amount || 0),
         deduction_amount: Number(editFormData.deductionAmount || 0),
         revenue:
           Number(editFormData.amount || 0) -
           Number(editFormData.deductionAmount || 0),
-
         payment_mode: editFormData.paymentMode,
         payment_status: editFormData.paymentStatus,
-
         form_service_type:
           activeTab === "form_filling" ? editFormData.serviceType : null,
-
         application_id:
           activeTab === "form_filling" ? editFormData.applicationId : null,
-
         application_password:
           activeTab === "form_filling" ? editFormData.password : null,
-
-        /* ================= CUSTOMER TABLE ================= */
         customer_name: editFormData.customerName,
         customer_phone: editFormData.customerPhone,
         customer_email: editFormData.customerEmail,
@@ -307,7 +228,6 @@ const MyTasks: React.FC = () => {
 
       toast.success("Task updated successfully!");
       await fetchMyTasks();
-
       setIsEditModalOpen(false);
       setEditingTask(null);
     } catch (err) {
@@ -321,18 +241,18 @@ const MyTasks: React.FC = () => {
     setIsUploadModalOpen(true);
   };
 
+  // ✅ KEY FIX: send completed_by = current user's id when marking complete
   const handleUploadScreenshot = async () => {
     if (!uploadingTask) return;
 
     try {
-      // ⚠️ This ONLY updates status (no real file upload)
       await api.put(`/tasks/${uploadingTask.id}`, {
         work_status: "completed",
+        completed_by: user?.id, // ✅ tracks who actually did the work
       });
 
       toast.success("Work marked as completed!");
       await fetchMyTasks();
-
       setIsUploadModalOpen(false);
       setUploadingTask(null);
     } catch (err) {
@@ -341,14 +261,12 @@ const MyTasks: React.FC = () => {
     }
   };
 
-  // Inside MyTasks component...
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   const scrollTable = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {
-      const scrollAmount = 400; // Pixels to move
+      const scrollAmount = 400;
       const currentScroll = scrollContainerRef.current.scrollLeft;
-
       scrollContainerRef.current.scrollTo({
         left:
           direction === "left"
@@ -361,9 +279,7 @@ const MyTasks: React.FC = () => {
 
   const isSearchMatch = (task: FormFillingTask | XeroxTask) => {
     if (!searchQuery) return false;
-
     const query = searchQuery.toLowerCase();
-
     return (
       task.customerName.toLowerCase().includes(query) ||
       task.customerPhone.includes(searchQuery) ||
@@ -384,29 +300,15 @@ const MyTasks: React.FC = () => {
       <div className="flex gap-4">
         <Button
           variant={activeTab === "form_filling" ? "default" : "outline"}
-          onClick={() => {
-            setActiveTab("form_filling");
-            setCurrentPage(1);
-          }}
-          className={
-            activeTab === "form_filling"
-              ? "gradient-primary text-primary-foreground"
-              : ""
-          }
+          onClick={() => { setActiveTab("form_filling"); setCurrentPage(1); }}
+          className={activeTab === "form_filling" ? "gradient-primary text-primary-foreground" : ""}
         >
           Online Service
         </Button>
         <Button
           variant={activeTab === "xerox" ? "default" : "outline"}
-          onClick={() => {
-            setActiveTab("xerox");
-            setCurrentPage(1);
-          }}
-          className={
-            activeTab === "xerox"
-              ? "gradient-primary text-primary-foreground"
-              : ""
-          }
+          onClick={() => { setActiveTab("xerox"); setCurrentPage(1); }}
+          className={activeTab === "xerox" ? "gradient-primary text-primary-foreground" : ""}
         >
           Offline Service
         </Button>
@@ -417,10 +319,7 @@ const MyTasks: React.FC = () => {
         <Input
           placeholder="Search by customer name or phone or desc..."
           value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            setCurrentPage(1);
-          }}
+          onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
           className="max-w-sm"
         />
         <Select
@@ -443,7 +342,6 @@ const MyTasks: React.FC = () => {
 
       {/* Table */}
       <Card className="shadow-card relative group">
-        {/* LEFT BUTTON - Constant Position */}
         <div className="absolute left-2 top-1/2 -translate-y-1/2 z-30 invisible group-hover:visible">
           <Button
             variant="secondary"
@@ -454,8 +352,6 @@ const MyTasks: React.FC = () => {
             <ChevronLeft className="h-6 w-6" />
           </Button>
         </div>
-
-        {/* RIGHT BUTTON - Constant Position */}
         <div className="absolute right-2 top-1/2 -translate-y-1/2 z-30 invisible group-hover:visible">
           <Button
             variant="secondary"
@@ -468,7 +364,6 @@ const MyTasks: React.FC = () => {
         </div>
 
         <CardContent className="p-0">
-          {/* Pass the ref to the Table component */}
           <Table ref={scrollContainerRef}>
             <TableHeader>
               <TableRow>
@@ -514,21 +409,15 @@ const MyTasks: React.FC = () => {
                     <TableCell>
                       <div className="space-y-1">
                         <p className="font-semibold">{task.customerName}</p>
-
                         <p className="text-sm text-muted-foreground">
                           {task.customerPhone}
                         </p>
-
                         <p className="text-sm text-muted-foreground">
                           {task.customerEmail}
                         </p>
-
                         {activeTab === "form_filling" && (
                           <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary capitalize">
-                            {(task as FormFillingTask).serviceType?.replace(
-                              "_",
-                              " ",
-                            )}
+                            {(task as FormFillingTask).serviceType?.replace("_", " ")}
                           </span>
                         )}
                       </div>
@@ -557,6 +446,7 @@ const MyTasks: React.FC = () => {
                     <TableCell className="max-w-[200px] truncate">
                       {task.description || "-"}
                     </TableCell>
+
                     {activeTab === "form_filling" && (
                       <TableCell>
                         <Button
@@ -568,25 +458,24 @@ const MyTasks: React.FC = () => {
                               : "bg-warning/20 text-warning hover:bg-warning/30"
                           }
                           onClick={() => {
-                            if (
-                              (task as FormFillingTask).workStatus === "pending"
-                            ) {
+                            if ((task as FormFillingTask).workStatus === "pending") {
                               handleUploadClick(task as FormFillingTask);
                             }
                           }}
                         >
-                          {(task as FormFillingTask).workStatus ===
-                            "pending" && <Upload className="h-4 w-4 mr-1" />}
+                          {(task as FormFillingTask).workStatus === "pending" && (
+                            <Upload className="h-4 w-4 mr-1" />
+                          )}
                           {(task as FormFillingTask).workStatus}
                         </Button>
                       </TableCell>
                     )}
+
                     <TableCell>
                       <div className="space-y-1">
                         <p className="capitalize font-medium">
                           {task.paymentMode || "Not Selected"}
                         </p>
-
                         <span
                           className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
                             task.paymentStatus === "completed"
@@ -622,7 +511,7 @@ const MyTasks: React.FC = () => {
         onPageChange={setCurrentPage}
       />
 
-      {/* Edit Modal - Full Edit */}
+      {/* Edit Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="bg-card border border-border max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -636,10 +525,7 @@ const MyTasks: React.FC = () => {
                   <Input
                     value={editFormData.customerName}
                     onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        customerName: e.target.value,
-                      })
+                      setEditFormData({ ...editFormData, customerName: e.target.value })
                     }
                   />
                 </div>
@@ -651,13 +537,8 @@ const MyTasks: React.FC = () => {
                     maxLength={10}
                     value={editFormData.customerPhone}
                     onChange={(e) => {
-                      const value = e.target.value
-                        .replace(/\D/g, "")
-                        .slice(0, 10);
-                      setEditFormData({
-                        ...editFormData,
-                        customerPhone: value,
-                      });
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setEditFormData({ ...editFormData, customerPhone: value });
                     }}
                   />
                 </div>
@@ -667,10 +548,7 @@ const MyTasks: React.FC = () => {
                     type="email"
                     value={editFormData.customerEmail}
                     onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        customerEmail: e.target.value.toLowerCase(),
-                      })
+                      setEditFormData({ ...editFormData, customerEmail: e.target.value.toLowerCase() })
                     }
                   />
                 </div>
@@ -683,15 +561,10 @@ const MyTasks: React.FC = () => {
                     <Select
                       value={editFormData.serviceType}
                       onValueChange={(value) =>
-                        setEditFormData({
-                          ...editFormData,
-                          serviceType: value as any,
-                        })
+                        setEditFormData({ ...editFormData, serviceType: value as any })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-popover border border-border z-50">
                         <SelectItem value="job_seeker">Job Seeker</SelectItem>
                         <SelectItem value="student">Student</SelectItem>
@@ -704,10 +577,7 @@ const MyTasks: React.FC = () => {
                     <Input
                       value={editFormData.applicationId}
                       onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          applicationId: e.target.value,
-                        })
+                        setEditFormData({ ...editFormData, applicationId: e.target.value })
                       }
                     />
                   </div>
@@ -716,10 +586,7 @@ const MyTasks: React.FC = () => {
                     <Input
                       value={editFormData.password}
                       onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          password: e.target.value,
-                        })
+                        setEditFormData({ ...editFormData, password: e.target.value })
                       }
                     />
                   </div>
@@ -731,16 +598,12 @@ const MyTasks: React.FC = () => {
                 <Textarea
                   value={editFormData.description}
                   onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      description: e.target.value.toUpperCase(),
-                    })
+                    setEditFormData({ ...editFormData, description: e.target.value.toUpperCase() })
                   }
                   rows={3}
                 />
               </div>
 
-              {/* Amount Section with Revenue Calculation */}
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label>Total Amount (₹)</Label>
@@ -749,9 +612,7 @@ const MyTasks: React.FC = () => {
                     placeholder="Enter amount"
                     value={editFormData.amount === 0 ? "" : editFormData.amount}
                     onChange={(e) => {
-                      const value =
-                        e.target.value === "" ? 0 : Number(e.target.value);
-
+                      const value = e.target.value === "" ? 0 : Number(e.target.value);
                       setEditFormData({
                         ...editFormData,
                         amount: value,
@@ -765,15 +626,9 @@ const MyTasks: React.FC = () => {
                   <Input
                     type="number"
                     placeholder="Enter deduction"
-                    value={
-                      editFormData.deductionAmount === 0
-                        ? ""
-                        : editFormData.deductionAmount
-                    }
+                    value={editFormData.deductionAmount === 0 ? "" : editFormData.deductionAmount}
                     onChange={(e) => {
-                      const value =
-                        e.target.value === "" ? 0 : Number(e.target.value);
-
+                      const value = e.target.value === "" ? 0 : Number(e.target.value);
                       setEditFormData({
                         ...editFormData,
                         deductionAmount: value,
@@ -802,9 +657,7 @@ const MyTasks: React.FC = () => {
                       })
                     }
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-popover border border-border z-50">
                       <SelectItem value="none">Not Selected</SelectItem>
                       <SelectItem value="cash">Cash</SelectItem>
@@ -818,15 +671,10 @@ const MyTasks: React.FC = () => {
                   <Select
                     value={editFormData.paymentStatus}
                     onValueChange={(value) =>
-                      setEditFormData({
-                        ...editFormData,
-                        paymentStatus: value as any,
-                      })
+                      setEditFormData({ ...editFormData, paymentStatus: value as any })
                     }
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-popover border border-border z-50">
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
@@ -836,10 +684,7 @@ const MyTasks: React.FC = () => {
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditModalOpen(false)}
-                >
+                <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
                   Cancel
                 </Button>
                 <Button
@@ -854,20 +699,21 @@ const MyTasks: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Upload Screenshot Modal */}
+      {/* Upload / Mark Complete Modal */}
       <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
         <DialogContent className="bg-card border border-border">
           <DialogHeader>
-            <DialogTitle>Upload Screenshot</DialogTitle>
+            <DialogTitle>Mark Task as Completed</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-muted-foreground">
-              Upload a screenshot to mark this task as completed.
+              Confirm that you have completed this task. This will record your
+              name as the person who completed it.
             </p>
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center relative">
               <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
               <p className="text-sm text-muted-foreground">
-                Click to upload or drag and drop
+                Click to upload or drag and drop a screenshot (optional)
               </p>
               <input
                 type="file"
@@ -887,7 +733,7 @@ const MyTasks: React.FC = () => {
                 onClick={handleUploadScreenshot}
                 className="gradient-primary text-primary-foreground"
               >
-                Upload & Complete
+                Mark as Completed
               </Button>
             </div>
           </div>

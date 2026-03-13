@@ -8,7 +8,7 @@ import React, {
 import { api } from "@/lib/api";
 
 /* =========================
-   TYPES (UNCHANGED – UI SAFE)
+   TYPES
 ========================= */
 export interface Customer {
   id: string;
@@ -38,6 +38,8 @@ export interface FormFillingTask {
   paymentStatus: "pending" | "completed" | "unpaid";
   employeeId: string;
   employeeName: string;
+  completedById?: string;       // ✅ NEW
+  completedByName?: string;     // ✅ NEW
   screenshotUrl?: string;
   createdAt: string;
 }
@@ -56,6 +58,8 @@ export interface XeroxTask {
   paymentStatus: "pending" | "completed" | "unpaid";
   employeeId: string;
   employeeName: string;
+  completedById?: string;       // ✅ NEW
+  completedByName?: string;     // ✅ NEW
   createdAt: string;
 }
 
@@ -70,7 +74,7 @@ export interface Employee {
 }
 
 /* =========================
-   CONTEXT TYPE (UNCHANGED)
+   CONTEXT TYPE
 ========================= */
 interface DataContextType {
   customers: Customer[];
@@ -117,14 +121,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>(
-    []
-  );
+  const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>([]);
   const [xeroxTasks, setXeroxTasks] = useState<XeroxTask[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
 
   /* =========================
-     EMPLOYEES (UNCHANGED)
+     EMPLOYEES
   ========================= */
   const fetchEmployees = async () => {
     const res = await api.get("/users");
@@ -162,7 +164,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
   const updateEmployee = async (id: string, updates: Partial<Employee>) => {
     await api.put(`/users/${id}`, updates);
-    await fetchEmployees(); // refresh employee list
+    await fetchEmployees();
   };
 
   /* =========================
@@ -194,13 +196,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             t.payment_status === "unpaid"
               ? "pending"
               : t.payment_status ?? "pending",
-
           paymentMode: t.payment_mode ?? "",
           description: t.description ?? "",
           employeeId: t.employee_id ? String(t.employee_id) : "",
-          employeeName: t.employee_name ?? "....",
+          employeeName: t.employee_name ?? "—",
+          completedById: t.completed_by ? String(t.completed_by) : undefined,   // ✅ NEW
+          completedByName: t.completed_by_name ?? undefined,                     // ✅ NEW
           screenshotUrl: t.screenshot_url,
-          createdAt: t.created_at, // Keep as string if your interface uses string
+          createdAt: t.created_at,
         });
       } else if (t.service_type === "xerox") {
         xx.push({
@@ -213,12 +216,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           deductionAmount: Number(t.deduction_amount ?? 0),
           revenue: Number(t.revenue ?? 0),
           paymentStatus:
-            t.payment_status === "unpaid" ? "pending" : t.payment_status ?? "pending",
+            t.payment_status === "unpaid"
+              ? "pending"
+              : t.payment_status ?? "pending",
           paymentMode: t.payment_mode ?? "",
           description: t.description ?? "",
           employeeId: t.employee_id ? String(t.employee_id) : "",
-          employeeName: t.employee_name ?? "....",
-          createdAt: t.created_at, // Keep as string if your interface uses string
+          employeeName: t.employee_name ?? "—",
+          completedById: t.completed_by ? String(t.completed_by) : undefined,   // ✅ NEW
+          completedByName: t.completed_by_name ?? undefined,                     // ✅ NEW
+          createdAt: t.created_at,
         });
       }
     });
@@ -228,11 +235,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   /* =========================
-   FETCH CUSTOMERS FROM DB
-========================= */
+     FETCH CUSTOMERS FROM DB
+  ========================= */
   const fetchCustomersFromDB = async () => {
     const res = await api.get("/customers");
-
     const list: Customer[] = res.data.map((c: any) => ({
       id: String(c.id),
       name: c.name,
@@ -241,19 +247,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       type: c.type,
       createdAt: c.created_at,
     }));
-
     setCustomers(list);
   };
 
   /* =========================
-     CUSTOMER (UI NEEDS THIS)
+     CUSTOMER
   ========================= */
   const addCustomer = async (customer: Omit<Customer, "id" | "createdAt">) => {
     const res = await api.post("/customers", customer);
     await refreshAll();
 
     const newCustomer: Customer = {
-      id: String(res.data.id), // ✅ REAL DB ID
+      id: String(res.data.id),
       name: res.data.name,
       email: res.data.email,
       phone: res.data.phone,
@@ -266,7 +271,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   /* =========================
-     CREATE TASK (DB)
+     CREATE TASK
   ========================= */
   const addFormFillingTask = async (task: any) => {
     await api.post("/tasks", {
@@ -301,21 +306,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   /* =========================
-     UPDATE TASK (DB)
+     UPDATE TASK
   ========================= */
-  // const updateFormFillingTask = async (id: string, updates: any) => {
-  //   await api.put(`/tasks/${id}`, {
-  //     application_id: updates.applicationId,
-  //     application_password: updates.password,
-  //     payment_status: updates.paymentStatus,
-  //     payment_mode: updates.paymentMode,
-  //     work_status: updates.workStatus,
-  //   });
-  //   await fetchTasksFromDB();
-  // };
   const updateTask = async (id: string, updates: any) => {
     try {
       await api.put(`/tasks/${id}`, {
+        employee_id: updates.employeeId ?? undefined,          // ✅ reassign
+        completed_by: updates.completedById ?? undefined,      // ✅ completed by
         customer_name: updates.customerName,
         customer_phone: updates.customerPhone,
         customer_email: updates.customerEmail,
@@ -328,8 +325,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         payment_status: updates.paymentStatus,
         description: updates.description,
       });
-
-      // refresh from DB (SAFEST)
       await fetchTasksFromDB();
       await refreshAll();
     } catch (error) {
@@ -338,16 +333,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  // const updateXeroxTask = async (id: string, updates: any) => {
-  //   await api.put(`/tasks/${id}`, {
-  //     payment_status: updates.paymentStatus,
-  //     payment_mode: updates.paymentMode,
-  //   });
-  //   await fetchTasksFromDB();
-  // };
   const updateXeroxTask = async (id: string, updates: any) => {
     try {
       await api.put(`/tasks/${id}`, {
+        employee_id: updates.employeeId ?? undefined,          // ✅ reassign
+        completed_by: updates.completedById ?? undefined,      // ✅ completed by
         customer_name: updates.customerName,
         customer_phone: updates.customerPhone,
         customer_email: updates.customerEmail,
@@ -357,7 +347,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         payment_status: updates.paymentStatus,
         description: updates.description,
       });
-
       await fetchTasksFromDB();
     } catch (error) {
       console.error("Update xerox task failed", error);
@@ -368,7 +357,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   const deleteXeroxTask = async (id: string) => {
     try {
       await api.delete(`/tasks/${id}`);
-      await fetchTasksFromDB(); // refresh UI
+      await fetchTasksFromDB();
       await refreshAll();
     } catch (error) {
       console.error("Delete task failed", error);
@@ -377,9 +366,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   /* =========================
-     UI HELPERS (UNCHANGED)
+     UI HELPERS
   ========================= */
-  // !changes here
   const getEmployeeTasks = (employeeId: string) => ({
     formFilling: formFillingTasks.filter(
       (t) => String(t.employeeId) === String(employeeId)
@@ -390,21 +378,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   });
 
   const getEmployeePendingCount = (employeeId: string) => {
-    // 1️⃣ Form Filling – work pending
     const formWorkPending = formFillingTasks.filter(
       (t) =>
         String(t.employeeId) === String(employeeId) &&
         t.workStatus === "pending"
     ).length;
 
-    // 2️⃣ Form Filling – payment pending
     const formPaymentPending = formFillingTasks.filter(
       (t) =>
         String(t.employeeId) === String(employeeId) &&
         (t.paymentStatus === "pending" || t.paymentStatus === "unpaid")
     ).length;
 
-    // 3️⃣ Xerox – payment pending
     const xeroxPaymentPending = xeroxTasks.filter(
       (t) =>
         String(t.employeeId) === String(employeeId) &&
@@ -414,7 +399,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     return formWorkPending + formPaymentPending + xeroxPaymentPending;
   };
 
-  // ! changes here
   const getTodayStats = () => {
     const revenue =
       formFillingTasks.reduce((s, t) => s + t.revenue, 0) +
@@ -441,7 +425,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         updateXeroxTask,
         deleteXeroxTask,
         addEmployee,
-        updateEmployee, // ✅ ADD THIS EXACT LINE
+        updateEmployee,
         getEmployeeTasks,
         getEmployeePendingCount,
         getTodayStats,

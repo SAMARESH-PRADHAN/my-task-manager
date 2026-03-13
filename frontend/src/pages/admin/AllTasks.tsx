@@ -44,17 +44,54 @@ import { downloadExcel } from "@/utils/excel";
 import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { formatToIST } from "@/utils/dateUtils";
 import { useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
 
 type TaskTab = "form_filling" | "xerox";
 type StatusFilter = "all" | "pending" | "completed";
 
+/* =========================
+   EMPLOYEE DISPLAY HELPER
+   Shows "X → Y" if reassigned, "X" if same person
+========================= */
+const EmployeeCell = ({
+  employeeName,
+  completedByName,
+}: {
+  employeeName: string;
+  completedByName?: string;
+}) => {
+  const wasReassigned =
+    completedByName && completedByName !== employeeName;
+
+  return (
+    <div className="space-y-1">
+      {wasReassigned ? (
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className="text-sm font-medium text-foreground">
+            {employeeName}
+          </span>
+          <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+          <span className="text-sm font-medium text-primary">
+            {completedByName}
+          </span>
+        </div>
+      ) : (
+        <p className="text-sm font-medium text-foreground">{employeeName}</p>
+      )}
+      {wasReassigned && (
+        <p className="text-xs text-muted-foreground">Reassigned</p>
+      )}
+    </div>
+  );
+};
+
 const AllTasks: React.FC = () => {
   const {
     formFillingTasks,
     xeroxTasks,
+    employees,
     updateTask,
     updateXeroxTask,
     deleteXeroxTask,
@@ -76,7 +113,7 @@ const AllTasks: React.FC = () => {
   const [editingFormTask, setEditingFormTask] =
     useState<FormFillingTask | null>(null);
   const [editingXeroxTask, setEditingXeroxTask] = useState<XeroxTask | null>(
-    null,
+    null
   );
 
   // Delete confirmation
@@ -85,11 +122,9 @@ const AllTasks: React.FC = () => {
 
   const filteredFormFillingTasks = useMemo(() => {
     return formFillingTasks.filter((task) => {
-      // Status filter
       if (statusFilter !== "all" && task.workStatus !== statusFilter)
         return false;
 
-      // Search filter
       const matchesSearch =
         (task.customerName ?? "")
           .toLowerCase()
@@ -101,7 +136,6 @@ const AllTasks: React.FC = () => {
 
       if (!matchesSearch) return false;
 
-      // Date filter
       if (fromDate && toDate) {
         const isInRange = isWithinInterval(new Date(task.createdAt), {
           start: startOfDay(fromDate),
@@ -116,11 +150,9 @@ const AllTasks: React.FC = () => {
 
   const filteredXeroxTasks = useMemo(() => {
     return xeroxTasks.filter((task) => {
-      // Status filter
       if (statusFilter !== "all" && task.paymentStatus !== statusFilter)
         return false;
 
-      // Search filter
       const matchesSearch =
         task.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         task.customerPhone.includes(searchQuery) ||
@@ -129,7 +161,6 @@ const AllTasks: React.FC = () => {
           .includes(searchQuery.toLowerCase());
       if (!matchesSearch) return false;
 
-      // Date filter
       if (fromDate && toDate) {
         const isInRange = isWithinInterval(new Date(task.createdAt), {
           start: startOfDay(fromDate),
@@ -147,18 +178,16 @@ const AllTasks: React.FC = () => {
       ? filteredFormFillingTasks
       : filteredXeroxTasks;
   const totalPages = Math.ceil(currentTasks.length / ITEMS_PER_PAGE);
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab, statusFilter, searchQuery, fromDate, toDate]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages || 1);
     }
   }, [totalPages]);
+
   const paginatedTasks = currentTasks.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
   );
 
   const handleDownload = () => {
@@ -169,7 +198,8 @@ const AllTasks: React.FC = () => {
         Phone: task.customerPhone,
         Email: task.customerEmail,
         "Service Type": (task.serviceType ?? "unknown").replace("_", " "),
-        Employee: task.employeeName,
+        "Assigned To": task.employeeName,
+        "Completed By": task.completedByName || task.employeeName,
         "Application ID": task.applicationId,
         Password: task.password,
         "Total Amount": task.amount,
@@ -187,6 +217,8 @@ const AllTasks: React.FC = () => {
         "Customer Name": task.customerName,
         Phone: task.customerPhone,
         Email: task.customerEmail,
+        "Assigned To": task.employeeName,
+        "Completed By": task.completedByName || task.employeeName,
         "Total Amount": task.amount,
         Deduction: task.deductionAmount || 0,
         Revenue: task.revenue || task.amount,
@@ -201,7 +233,7 @@ const AllTasks: React.FC = () => {
 
   const handleFormTaskAmountChange = (
     field: "amount" | "deductionAmount",
-    value: number,
+    value: number
   ) => {
     if (!editingFormTask) return;
     const newTask = { ...editingFormTask, [field]: value };
@@ -211,7 +243,7 @@ const AllTasks: React.FC = () => {
 
   const handleXeroxTaskAmountChange = (
     field: "amount" | "deductionAmount",
-    value: number,
+    value: number
   ) => {
     if (!editingXeroxTask) return;
     const newTask = { ...editingXeroxTask, [field]: value };
@@ -221,7 +253,6 @@ const AllTasks: React.FC = () => {
 
   const handleEditFormTask = async () => {
     if (!editingFormTask) return;
-
     try {
       await updateTask(editingFormTask.id, editingFormTask);
       toast.success("Task updated successfully!");
@@ -232,17 +263,20 @@ const AllTasks: React.FC = () => {
     }
   };
 
-  const handleEditXeroxTask = () => {
+  const handleEditXeroxTask = async () => {
     if (!editingXeroxTask) return;
-    updateXeroxTask(editingXeroxTask.id, editingXeroxTask);
-    toast.success("Task updated successfully!");
-    setIsEditModalOpen(false);
-    setEditingXeroxTask(null);
+    try {
+      await updateXeroxTask(editingXeroxTask.id, editingXeroxTask);
+      toast.success("Task updated successfully!");
+      setIsEditModalOpen(false);
+      setEditingXeroxTask(null);
+    } catch {
+      toast.error("Failed to update task");
+    }
   };
 
   const handleDeleteTask = async () => {
     if (!deletingTaskId) return;
-
     try {
       await deleteXeroxTask(deletingTaskId);
       toast.success("Task deleted successfully!");
@@ -258,9 +292,8 @@ const AllTasks: React.FC = () => {
 
   const scrollTable = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {
-      const scrollAmount = 400; // Pixels to move
+      const scrollAmount = 400;
       const currentScroll = scrollContainerRef.current.scrollLeft;
-
       scrollContainerRef.current.scrollTo({
         left:
           direction === "left"
@@ -273,9 +306,7 @@ const AllTasks: React.FC = () => {
 
   const isSearchMatch = (task: FormFillingTask | XeroxTask) => {
     if (!searchQuery) return false;
-
     const query = searchQuery.toLowerCase();
-
     return (
       task.customerName.toLowerCase().includes(query) ||
       task.customerPhone.includes(searchQuery) ||
@@ -369,7 +400,6 @@ const AllTasks: React.FC = () => {
 
       {/* Table */}
       <Card className="shadow-card relative group">
-        {/* LEFT BUTTON - Constant Position */}
         <div className="absolute left-2 top-1/2 -translate-y-1/2 z-30 invisible group-hover:visible">
           <Button
             variant="secondary"
@@ -380,8 +410,6 @@ const AllTasks: React.FC = () => {
             <ChevronLeft className="h-6 w-6" />
           </Button>
         </div>
-
-        {/* RIGHT BUTTON - Constant Position */}
         <div className="absolute right-2 top-1/2 -translate-y-1/2 z-30 invisible group-hover:visible">
           <Button
             variant="secondary"
@@ -392,6 +420,7 @@ const AllTasks: React.FC = () => {
             <ChevronRight className="h-6 w-6" />
           </Button>
         </div>
+
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             {activeTab === "form_filling" ? (
@@ -400,7 +429,6 @@ const AllTasks: React.FC = () => {
                   <TableRow>
                     <TableHead>S.No</TableHead>
                     <TableHead>Customer Details</TableHead>
-                    {/* <TableHead>Service Type</TableHead> */}
                     <TableHead>Employee</TableHead>
                     <TableHead>Application Details</TableHead>
                     <TableHead>Description</TableHead>
@@ -439,44 +467,38 @@ const AllTasks: React.FC = () => {
                         <TableCell>
                           <div className="space-y-1">
                             <p className="font-semibold">{task.customerName}</p>
-
                             <p className="text-sm text-muted-foreground">
                               {task.customerPhone}
                             </p>
-
                             {task.customerEmail && (
                               <p className="text-sm text-muted-foreground">
                                 {task.customerEmail}
                               </p>
                             )}
-
                             <span className="inline-block mt-1 px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary capitalize">
-                              {(task.serviceType ?? "unknown").replace(
-                                "_",
-                                " ",
-                              )}
+                              {(task.serviceType ?? "unknown").replace("_", " ")}
                             </span>
                           </div>
                         </TableCell>
-                        {/* <TableCell className="capitalize">
-                          {(task.serviceType ?? "unknown").replace("_", " ")}
-                        </TableCell> */}
 
-                        <TableCell>{task.employeeName}</TableCell>
+                        {/* ✅ Employee column: X → Y */}
+                        <TableCell>
+                          <EmployeeCell
+                            employeeName={task.employeeName}
+                            completedByName={task.completedByName}
+                          />
+                        </TableCell>
+
                         <TableCell>
                           <div className="space-y-1 text-sm">
                             <p>
-                              <span className="text-muted-foreground">
-                                App ID:
-                              </span>{" "}
+                              <span className="text-muted-foreground">App ID:</span>{" "}
                               <span className="font-medium">
                                 {task.applicationId || "-"}
                               </span>
                             </p>
                             <p>
-                              <span className="text-muted-foreground">
-                                Password:
-                              </span>{" "}
+                              <span className="text-muted-foreground">Password:</span>{" "}
                               <span className="font-medium">
                                 {task.password || "-"}
                               </span>
@@ -513,7 +535,6 @@ const AllTasks: React.FC = () => {
                         <TableCell className="font-semibold text-primary">
                           ₹{task.revenue || task.amount}
                         </TableCell>
-
                         <TableCell>
                           {formatToIST(task.createdAt, "dd/MM/yyyy HH:mm")}
                         </TableCell>
@@ -529,7 +550,6 @@ const AllTasks: React.FC = () => {
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
-
                             <Button
                               size="sm"
                               variant="ghost"
@@ -568,7 +588,7 @@ const AllTasks: React.FC = () => {
                   {(paginatedTasks as XeroxTask[]).length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={9}
+                        colSpan={10}
                         className="text-center py-8 text-muted-foreground"
                       >
                         No tasks found
@@ -598,7 +618,15 @@ const AllTasks: React.FC = () => {
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell>{task.employeeName}</TableCell>
+
+                        {/* ✅ Employee column: X → Y */}
+                        <TableCell>
+                          <EmployeeCell
+                            employeeName={task.employeeName}
+                            completedByName={task.completedByName}
+                          />
+                        </TableCell>
+
                         <TableCell>₹{task.amount}</TableCell>
                         <TableCell>₹{task.deductionAmount || 0}</TableCell>
                         <TableCell className="font-semibold text-primary">
@@ -664,7 +692,9 @@ const AllTasks: React.FC = () => {
         />
       )}
 
-      {/* Edit Form Task Modal */}
+      {/* =====================
+          EDIT FORM TASK MODAL
+      ===================== */}
       <Dialog
         open={isEditModalOpen && editingFormTask !== null}
         onOpenChange={(open) => {
@@ -680,6 +710,47 @@ const AllTasks: React.FC = () => {
           </DialogHeader>
           {editingFormTask && (
             <div className="space-y-4">
+
+              {/* REASSIGN SECTION */}
+              <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-3">
+                <p className="text-sm font-medium text-foreground">Reassign Employee</p>
+                <div className="space-y-2">
+                  <Label>Assign To</Label>
+                  <Select
+                    value={editingFormTask.employeeId}
+                    onValueChange={(value) =>
+                      setEditingFormTask({
+                        ...editingFormTask,
+                        employeeId: value,
+                        employeeName:
+                          employees.find((e) => e.id === value)?.name ?? "",
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select employee" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border border-border z-50">
+                      {employees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {editingFormTask.completedByName && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <ArrowRight className="h-3 w-3" />
+                    Completed by:{" "}
+                    <span className="font-medium text-primary">
+                      {editingFormTask.completedByName}
+                    </span>
+                    {" "}(set automatically when employee marks complete)
+                  </p>
+                )}
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Customer Name</Label>
@@ -722,7 +793,6 @@ const AllTasks: React.FC = () => {
                     }
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label>Application ID</Label>
                   <Input
@@ -749,7 +819,6 @@ const AllTasks: React.FC = () => {
                 </div>
               </div>
 
-              {/* Amount Section with Revenue */}
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label>Total Amount (₹)</Label>
@@ -786,10 +855,7 @@ const AllTasks: React.FC = () => {
                 <div className="space-y-2">
                   <Label>Revenue (₹)</Label>
                   <div className="h-10 px-3 py-2 rounded-md border border-input bg-muted flex items-center font-semibold text-primary">
-                    ₹
-                    {(
-                      editingFormTask.revenue || editingFormTask.amount
-                    ).toFixed(2)}
+                    ₹{(editingFormTask.revenue || editingFormTask.amount).toFixed(2)}
                   </div>
                 </div>
               </div>
@@ -836,6 +902,7 @@ const AllTasks: React.FC = () => {
                   </Select>
                 </div>
               </div>
+
               <div className="space-y-2">
                 <Label>Description</Label>
                 <Textarea
@@ -848,6 +915,7 @@ const AllTasks: React.FC = () => {
                   }
                 />
               </div>
+
               <div className="flex gap-4 justify-end">
                 <Button
                   variant="outline"
@@ -870,7 +938,9 @@ const AllTasks: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Xerox Task Modal */}
+      {/* =====================
+          EDIT XEROX TASK MODAL
+      ===================== */}
       <Dialog
         open={isEditModalOpen && editingXeroxTask !== null}
         onOpenChange={(open) => {
@@ -886,6 +956,47 @@ const AllTasks: React.FC = () => {
           </DialogHeader>
           {editingXeroxTask && (
             <div className="space-y-4">
+
+              {/* REASSIGN SECTION */}
+              <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-3">
+                <p className="text-sm font-medium text-foreground">Reassign Employee</p>
+                <div className="space-y-2">
+                  <Label>Assign To</Label>
+                  <Select
+                    value={editingXeroxTask.employeeId}
+                    onValueChange={(value) =>
+                      setEditingXeroxTask({
+                        ...editingXeroxTask,
+                        employeeId: value,
+                        employeeName:
+                          employees.find((e) => e.id === value)?.name ?? "",
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select employee" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border border-border z-50">
+                      {employees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {editingXeroxTask.completedByName && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <ArrowRight className="h-3 w-3" />
+                    Completed by:{" "}
+                    <span className="font-medium text-primary">
+                      {editingXeroxTask.completedByName}
+                    </span>
+                    {" "}(set automatically when employee marks complete)
+                  </p>
+                )}
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Customer Name</Label>
@@ -913,7 +1024,6 @@ const AllTasks: React.FC = () => {
                 </div>
               </div>
 
-              {/* Amount Section with Revenue */}
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label>Total Amount (₹)</Label>
@@ -921,9 +1031,7 @@ const AllTasks: React.FC = () => {
                     type="number"
                     placeholder="Enter amount"
                     value={
-                      editingXeroxTask.amount === 0
-                        ? ""
-                        : editingXeroxTask.amount
+                      editingXeroxTask.amount === 0 ? "" : editingXeroxTask.amount
                     }
                     onChange={(e) => {
                       const value =
@@ -952,10 +1060,7 @@ const AllTasks: React.FC = () => {
                 <div className="space-y-2">
                   <Label>Revenue (₹)</Label>
                   <div className="h-10 px-3 py-2 rounded-md border border-input bg-muted flex items-center font-semibold text-primary">
-                    ₹
-                    {(
-                      editingXeroxTask.revenue || editingXeroxTask.amount
-                    ).toFixed(2)}
+                    ₹{(editingXeroxTask.revenue || editingXeroxTask.amount).toFixed(2)}
                   </div>
                 </div>
               </div>
@@ -980,6 +1085,7 @@ const AllTasks: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-2">
                 <Label>Description</Label>
                 <Textarea
@@ -992,6 +1098,7 @@ const AllTasks: React.FC = () => {
                   }
                 />
               </div>
+
               <div className="flex gap-4 justify-end">
                 <Button
                   variant="outline"
@@ -1014,7 +1121,7 @@ const AllTasks: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation */}
       <AlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
