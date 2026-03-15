@@ -39,8 +39,8 @@ export interface FormFillingTask {
   paymentStatus: "pending" | "completed" | "unpaid";
   employeeId: string;
   employeeName: string;
-  completedById?: string;       // ✅ NEW
-  completedByName?: string;     // ✅ NEW
+  completedById?: string; // ✅ NEW
+  completedByName?: string; // ✅ NEW
   screenshotUrl?: string;
   createdAt: string;
 }
@@ -59,8 +59,8 @@ export interface XeroxTask {
   paymentStatus: "pending" | "completed" | "unpaid";
   employeeId: string;
   employeeName: string;
-  completedById?: string;       // ✅ NEW
-  completedByName?: string;     // ✅ NEW
+  completedById?: string; // ✅ NEW
+  completedByName?: string; // ✅ NEW
   createdAt: string;
 }
 
@@ -84,7 +84,7 @@ interface DataContextType {
   employees: Employee[];
 
   addCustomer: (
-    customer: Omit<Customer, "id" | "createdAt">
+    customer: Omit<Customer, "id" | "createdAt">,
   ) => Promise<Customer>;
 
   addFormFillingTask: (task: any) => Promise<void>;
@@ -122,7 +122,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>([]);
+  const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>(
+    [],
+  );
   const [xeroxTasks, setXeroxTasks] = useState<XeroxTask[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
 
@@ -142,7 +144,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           address: e.address,
           password: "",
           createdAt: e.created_at,
-        }))
+        })),
     );
   };
 
@@ -197,13 +199,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           paymentStatus:
             t.payment_status === "unpaid"
               ? "pending"
-              : t.payment_status ?? "pending",
+              : (t.payment_status ?? "pending"),
           paymentMode: t.payment_mode ?? "",
           description: t.description ?? "",
           employeeId: t.employee_id ? String(t.employee_id) : "",
           employeeName: t.employee_name ?? "—",
-          completedById: t.completed_by ? String(t.completed_by) : undefined,   // ✅ NEW
-          completedByName: t.completed_by_name ?? undefined,                     // ✅ NEW
+          completedById: t.completed_by ? String(t.completed_by) : undefined, // ✅ NEW
+          completedByName: t.completed_by_name ?? undefined, // ✅ NEW
           screenshotUrl: t.screenshot_url,
           createdAt: t.created_at,
         });
@@ -220,13 +222,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           paymentStatus:
             t.payment_status === "unpaid"
               ? "pending"
-              : t.payment_status ?? "pending",
+              : (t.payment_status ?? "pending"),
           paymentMode: t.payment_mode ?? "",
           description: t.description ?? "",
           employeeId: t.employee_id ? String(t.employee_id) : "",
           employeeName: t.employee_name ?? "—",
-          completedById: t.completed_by ? String(t.completed_by) : undefined,   // ✅ NEW
-          completedByName: t.completed_by_name ?? undefined,                     // ✅ NEW
+          completedById: t.completed_by ? String(t.completed_by) : undefined, // ✅ NEW
+          completedByName: t.completed_by_name ?? undefined, // ✅ NEW
           createdAt: t.created_at,
         });
       }
@@ -314,9 +316,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   const updateTask = async (id: string, updates: any) => {
     try {
       await api.put(`/tasks/${id}`, {
+        service_type: "form_filling",
+        form_service_type: updates.serviceType,
         board_name: updates.boardName,
-        employee_id: updates.employeeId ?? undefined,          // ✅ reassign
-        completed_by: updates.completedById ?? undefined,      // ✅ completed by
+        employee_id: updates.employeeId ?? undefined, // ✅ reassign
+        completed_by: updates.completedById ?? undefined, // ✅ completed by
         customer_name: updates.customerName,
         customer_phone: updates.customerPhone,
         customer_email: updates.customerEmail,
@@ -340,8 +344,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   const updateXeroxTask = async (id: string, updates: any) => {
     try {
       await api.put(`/tasks/${id}`, {
-        employee_id: updates.employeeId ?? undefined,          // ✅ reassign
-        completed_by: updates.completedById ?? undefined,      // ✅ completed by
+        employee_id: updates.employeeId ?? undefined, // ✅ reassign
+        completed_by: updates.completedById ?? undefined, // ✅ completed by
         customer_name: updates.customerName,
         customer_phone: updates.customerPhone,
         customer_email: updates.customerEmail,
@@ -374,10 +378,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   ========================= */
   const getEmployeeTasks = (employeeId: string) => ({
     formFilling: formFillingTasks.filter(
-      (t) => String(t.employeeId) === String(employeeId)
+      (t) => String(t.employeeId) === String(employeeId),
     ),
     xerox: xeroxTasks.filter(
-      (t) => String(t.employeeId) === String(employeeId)
+      (t) => String(t.employeeId) === String(employeeId),
     ),
   });
 
@@ -385,19 +389,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     const formWorkPending = formFillingTasks.filter(
       (t) =>
         String(t.employeeId) === String(employeeId) &&
-        t.workStatus === "pending"
+        t.workStatus === "pending",
     ).length;
 
     const formPaymentPending = formFillingTasks.filter(
       (t) =>
         String(t.employeeId) === String(employeeId) &&
-        (t.paymentStatus === "pending" || t.paymentStatus === "unpaid")
+        (t.paymentStatus === "pending" || t.paymentStatus === "unpaid"),
     ).length;
 
     const xeroxPaymentPending = xeroxTasks.filter(
       (t) =>
         String(t.employeeId) === String(employeeId) &&
-        t.paymentStatus === "pending"
+        t.paymentStatus === "pending",
     ).length;
 
     return formWorkPending + formPaymentPending + xeroxPaymentPending;

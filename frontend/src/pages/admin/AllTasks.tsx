@@ -117,7 +117,8 @@ const AllTasks: React.FC = () => {
   const [editingXeroxTask, setEditingXeroxTask] = useState<XeroxTask | null>(
     null,
   );
-
+  const [updatingFormTask, setUpdatingFormTask] = useState(false);
+  const [updatingXeroxTask, setUpdatingXeroxTask] = useState(false);
   //notification confirmation
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
@@ -316,24 +317,30 @@ const AllTasks: React.FC = () => {
   const handleEditFormTask = async () => {
     if (!editingFormTask) return;
     try {
+      setUpdatingFormTask(true);
       await updateTask(editingFormTask.id, editingFormTask);
       toast.success("Task updated successfully!");
       setIsEditModalOpen(false);
       setEditingFormTask(null);
     } catch {
       toast.error("Failed to update task");
+    } finally {
+      setUpdatingFormTask(false);
     }
   };
 
   const handleEditXeroxTask = async () => {
     if (!editingXeroxTask) return;
     try {
+      setUpdatingXeroxTask(true);
       await updateXeroxTask(editingXeroxTask.id, editingXeroxTask);
       toast.success("Task updated successfully!");
       setIsEditModalOpen(false);
       setEditingXeroxTask(null);
     } catch {
       toast.error("Failed to update task");
+    } finally {
+      setUpdatingXeroxTask(false);
     }
   };
 
@@ -510,9 +517,10 @@ const AllTasks: React.FC = () => {
                     <TableHead>S.No</TableHead>
                     <TableHead>Customer Details</TableHead>
                     <TableHead>Employee</TableHead>
-                    <TableHead>Application Details</TableHead>
                     <TableHead>Board</TableHead>
                     <TableHead>Description</TableHead>
+                    <TableHead>Application Details</TableHead>
+
                     <TableHead>Work Status</TableHead>
                     <TableHead>Payment Status</TableHead>
                     <TableHead>Total Amount</TableHead>
@@ -572,7 +580,10 @@ const AllTasks: React.FC = () => {
                             completedByName={task.completedByName}
                           />
                         </TableCell>
-
+                        <TableCell>{task.boardName || "-"}</TableCell>
+                        <TableCell className="max-w-[150px] truncate">
+                          {task.description || "-"}
+                        </TableCell>
                         <TableCell>
                           <div className="space-y-1 text-sm">
                             <p>
@@ -593,10 +604,7 @@ const AllTasks: React.FC = () => {
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell>{task.boardName || "-"}</TableCell>
-                        <TableCell className="max-w-[150px] truncate">
-                          {task.description || "-"}
-                        </TableCell>
+
                         <TableCell>
                           <span
                             className={`px-2 py-1 rounded-full text-xs ${
@@ -1081,9 +1089,10 @@ const AllTasks: React.FC = () => {
                 </Button>
                 <Button
                   onClick={handleEditFormTask}
+                  disabled={updatingFormTask}
                   className="gradient-primary text-primary-foreground"
                 >
-                  Update
+                  {updatingFormTask ? "Updating..." : "Update"}
                 </Button>
               </div>
             </div>
@@ -1270,9 +1279,10 @@ const AllTasks: React.FC = () => {
                 </Button>
                 <Button
                   onClick={handleEditXeroxTask}
+                  disabled={updatingXeroxTask}
                   className="gradient-primary text-primary-foreground"
                 >
-                  Update
+                  {updatingXeroxTask ? "Updating..." : "Update"}
                 </Button>
               </div>
             </div>

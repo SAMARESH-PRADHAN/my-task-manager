@@ -32,6 +32,7 @@ const NewTask: React.FC = () => {
   const [customerPhone, setCustomerPhone] = useState("");
 
   // const [formServiceTypee, setFormServiceTypee]; = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Service selection
   const [serviceType, setServiceType] = useState<ServiceType | "">("");
@@ -86,6 +87,7 @@ const NewTask: React.FC = () => {
     }
 
     try {
+      setIsSubmitting(true); // 🔹 Disable button here
       const customerType: "job_seeker" | "student" | "gov_scheme" | "xerox" =
         serviceType === "form_filling"
           ? formServiceType || "job_seeker"
@@ -105,7 +107,10 @@ const NewTask: React.FC = () => {
       let finalBoard = boardName;
 
       if (boardName === "custom") {
-        await api.post("/boards", { name: customBoard, service_type: formServiceType,});
+        await api.post("/boards", {
+          name: customBoard,
+          service_type: formServiceType,
+        });
         finalBoard = customBoard;
       }
 
@@ -139,6 +144,7 @@ const NewTask: React.FC = () => {
     } catch (err) {
       console.error(err);
       toast.error("Failed to create task");
+      setIsSubmitting(false);
     }
   };
 
@@ -309,7 +315,16 @@ const NewTask: React.FC = () => {
                 </div>
               </>
             )}
-
+            <div className="space-y-2">
+              <Label htmlFor="description">Work Description</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value.toUpperCase())}
+                placeholder="ENTER WORK DESCRIPTION"
+                rows={3}
+              />
+            </div>
             <div className="space-y-2">
               <Label>Payment Mode</Label>
               <Select
@@ -325,17 +340,6 @@ const NewTask: React.FC = () => {
                   <SelectItem value="card">Card</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Work Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value.toUpperCase())}
-                placeholder="ENTER WORK DESCRIPTION"
-                rows={3}
-              />
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
@@ -378,8 +382,9 @@ const NewTask: React.FC = () => {
           <Button
             type="submit"
             className="gradient-primary text-primary-foreground"
+            disabled={isSubmitting} // 🔹 disable button
           >
-            Create Task
+            {isSubmitting ? "Submitting..." : "Create Task"}
           </Button>
         </div>
       </form>
