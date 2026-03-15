@@ -47,7 +47,6 @@ import { useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "@/lib/api";
 
-
 const ITEMS_PER_PAGE = 10;
 
 type TaskTab = "form_filling" | "xerox";
@@ -74,18 +73,18 @@ const AllTasksEmployee: React.FC = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, statusFilter, searchQuery, boardFilter, fromDate, toDate]);
-  useEffect(() => {
-      const fetchBoards = async () => {
-        try {
-          const res = await api.get("/boards");
-          setBoards(res.data.map((b: any) => b.name));
-        } catch (err) {
-          console.error("Failed to load boards", err);
-        }
-      };
-  
-      fetchBoards();
-    }, []);
+  const fetchBoards = async (serviceType?: string) => {
+    try {
+      const url = serviceType
+        ? `/boards?service_type=${serviceType}`
+        : "/boards";
+
+      const res = await api.get(url);
+      setBoards(res.data.map((b: any) => b.name));
+    } catch (err) {
+      console.error("Failed to load boards", err);
+    }
+  };
   // Edit modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingFormTask, setEditingFormTask] =
@@ -566,6 +565,8 @@ const AllTasksEmployee: React.FC = () => {
                               variant="ghost"
                               onClick={() => {
                                 setEditingFormTask(task);
+                                // load boards based on task service type
+                                fetchBoards(task.serviceType);
                                 setIsEditModalOpen(true);
                               }}
                             >
@@ -764,7 +765,35 @@ const AllTasksEmployee: React.FC = () => {
                     }
                   />
                 </div>
-<div className="space-y-2">
+                <div className="space-y-2">
+                  <Label>Service Type</Label>
+
+                  <Select
+                    value={editingFormTask.serviceType}
+                    onValueChange={(value) => {
+                      setEditingFormTask({
+                        ...editingFormTask,
+                        serviceType: value as any,
+                        boardName: "",
+                      });
+
+                      fetchBoards(value);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+
+                    <SelectContent className="bg-popover border border-border z-50">
+                      <SelectItem value="job_seeker">Job Seeker</SelectItem>
+                      <SelectItem value="student">Student</SelectItem>
+                      <SelectItem value="gov_scheme">
+                        Government Scheme
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label>Board</Label>
 
                   <Select
@@ -801,7 +830,7 @@ const AllTasksEmployee: React.FC = () => {
                     }
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label>Password</Label>
                   <Input

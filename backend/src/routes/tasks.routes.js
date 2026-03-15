@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import { sql } from "../../config/db.js";
 import { auth } from "../middleware/auth.js";
+import { notifyTaskCompleted } from "./taskCompletionNotifier.js";
 
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
@@ -163,6 +164,7 @@ router.put("/:id", auth, async (req, res) => {
     const revenue = t.revenue != null ? Number(t.revenue) : current.revenue;
     const paymentStatus = t.payment_status ?? current.payment_status;
     const paymentMode = t.payment_mode ?? current.payment_mode;
+    const serviceType = t.service_type ?? current.service_type;
     const formServiceType = t.form_service_type ?? current.form_service_type;
     const boardName = t.board_name ?? current.board_name;
     const workStatus = t.work_status ?? current.work_status;
@@ -170,11 +172,14 @@ router.put("/:id", auth, async (req, res) => {
       workStatus === "completed" && current.work_status !== "completed"
         ? new Date()
         : current.completed_at;
+    const justCompleted =
+      workStatus === "completed" && current.work_status !== "completed";
 
     await sql`
       UPDATE tasks SET
         employee_id          = ${employeeId},
         completed_by         = ${completedBy},
+        service_type         = ${serviceType},
         application_id       = ${applicationId},
         application_password = ${applicationPassword},
         description          = ${description},
@@ -189,7 +194,10 @@ router.put("/:id", auth, async (req, res) => {
         completed_at         = ${completedAt}
       WHERE id = ${taskId}
     `;
-
+    // 🔔 Send WhatsApp notification when task completed
+    if (justCompleted) {
+      await notifyTaskCompleted(taskId);
+    }
     await sql`
       UPDATE customers SET
         name  = COALESCE(${t.customer_name ?? null}, name),

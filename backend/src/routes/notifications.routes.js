@@ -10,7 +10,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 /**
  * SEND BULK NOTIFICATION
  */
-router.post("/",auth, async (req, res) => {
+router.post("/", auth, async (req, res) => {
   const { message, targetType } = req.body;
 
   if (!message) {
@@ -22,11 +22,11 @@ router.post("/",auth, async (req, res) => {
 
     if (targetType === "all") {
       customers = await sql`
-        SELECT phone FROM customers WHERE phone IS NOT NULL
+        SELECT phone FROM custo WHERE phone IS NOT NULL
       `;
     } else {
       customers = await sql`
-        SELECT phone FROM customers 
+        SELECT phone FROM custo 
         WHERE type = ${targetType} AND phone IS NOT NULL
       `;
     }

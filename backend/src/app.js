@@ -10,6 +10,8 @@ import customersRoutes from "./routes/customers.routes.js";
 import exportRoutes from "./routes/export.routes.js";
 import notificationRoutes from "./routes/notifications.routes.js";
 import boardRoutes from "./routes/boards.js";
+import taskNotificationsRoutes from "./routes/taskNotifications.route.js";
+// import { notifyTaskCompleted } from "./taskCompletionNotifier.js";
 
 const app = express();
 
@@ -46,6 +48,8 @@ app.use("/customers", customersRoutes);
 app.use("/export", exportRoutes);
 app.use("/notifications", notificationRoutes);
 app.use("/boards", boardRoutes);
+app.use("/task-notifications", taskNotificationsRoutes);
+// app.use("/taskCompletionNotifier", taskCompletionNotifierRoutes);
 
 /* ======================
     HEALTH CHECK

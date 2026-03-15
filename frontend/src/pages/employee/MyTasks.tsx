@@ -143,18 +143,19 @@ const MyTasks: React.FC = () => {
     if (!user) return;
     fetchMyTasks();
   }, [user]);
-  useEffect(() => {
-    const fetchBoards = async () => {
-      try {
-        const res = await api.get("/boards");
-        setBoards(res.data.map((b: any) => b.name));
-      } catch (err) {
-        console.error("Failed to load boards", err);
-      }
-    };
+  const fetchBoards = async (serviceType?: string) => {
+    try {
+      const url = serviceType
+        ? `/boards?service_type=${serviceType}`
+        : "/boards";
 
-    fetchBoards();
-  }, []);
+      const res = await api.get(url);
+
+      setBoards(res.data.map((b: any) => b.name));
+    } catch (err) {
+      console.error("Failed to load boards", err);
+    }
+  };
   const employeeTasks = {
     formFilling: formFillingTasks,
     xerox: xeroxTasks,
@@ -228,6 +229,9 @@ const MyTasks: React.FC = () => {
           ? ((task as FormFillingTask).password ?? "")
           : "",
     });
+    if (activeTab === "form_filling") {
+      fetchBoards((task as FormFillingTask).serviceType);
+    }
     setIsEditModalOpen(true);
   };
 
@@ -649,12 +653,15 @@ const MyTasks: React.FC = () => {
                     <Label>Service Type</Label>
                     <Select
                       value={editFormData.serviceType}
-                      onValueChange={(value) =>
+                      onValueChange={(value) => {
                         setEditFormData({
                           ...editFormData,
                           serviceType: value as any,
-                        })
-                      }
+                          boardName: "",
+                        });
+
+                        fetchBoards(value);
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue />
