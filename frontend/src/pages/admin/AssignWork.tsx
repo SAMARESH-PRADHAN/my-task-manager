@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useData } from "@/contexts/DataContext";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,10 @@ type FormServiceType = "job_seeker" | "student" | "gov_scheme";
 type PaymentMode = "cash" | "upi" | "card";
 
 const AssignWork: React.FC = () => {
+  const [boards, setBoards] = useState<string[]>([]);
+  const [boardName, setBoardName] = useState("");
+  const [customBoard, setCustomBoard] = useState("");
+
   const navigate = useNavigate();
   const { employees } = useData();
 
@@ -35,9 +39,8 @@ const AssignWork: React.FC = () => {
   // Service selection
   const [serviceType, setServiceType] = useState<ServiceType | "">("");
   const [formServiceType, setFormServiceType] = useState<FormServiceType | "">(
-    ""
+    "",
   );
-
   // Form filling specific (optional)
   const [applicationId, setApplicationId] = useState("");
   const [password, setPassword] = useState("");
@@ -56,7 +59,7 @@ const AssignWork: React.FC = () => {
   }, [amount, deductionAmount]);
 
   const selectedEmployee = employees.find(
-    (emp) => emp.id === selectedEmployeeId
+    (emp) => emp.id === selectedEmployeeId,
   );
 
   // const handleSubmit = (e: React.FormEvent) => {
@@ -127,6 +130,18 @@ const AssignWork: React.FC = () => {
   //   navigate('/admin/all-tasks');
   // };
 
+  useEffect(() => {
+    const fetchBoards = async () => {
+      try {
+        const res = await api.get("/boards");
+        setBoards(res.data.map((b: any) => b.name));
+      } catch (err) {
+        console.error("Failed to load boards", err);
+      }
+    };
+
+    fetchBoards();
+  }, []);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -144,8 +159,23 @@ const AssignWork: React.FC = () => {
       toast.error("Please select form service type");
       return;
     }
+    // ADD THIS
+    if (serviceType === "form_filling" && !boardName) {
+      toast.error("Please select board name");
+      return;
+    }
 
+    if (boardName === "custom" && !customBoard) {
+      toast.error("Please enter custom board name");
+      return;
+    }
     try {
+      let finalBoard = boardName;
+
+      if (boardName === "custom") {
+        await api.post("/boards", { name: customBoard });
+        finalBoard = customBoard;
+      }
       // 1️⃣ CREATE CUSTOMER
       const customerRes = await api.post("/customers", {
         name: customerName,
@@ -163,6 +193,7 @@ const AssignWork: React.FC = () => {
         service_type: serviceType,
         form_service_type:
           serviceType === "form_filling" ? formServiceType : null,
+        board_name: finalBoard,
         application_id: applicationId || null,
         application_password: password || null,
         description,
@@ -231,7 +262,9 @@ const AssignWork: React.FC = () => {
                 <Input
                   id="customerName"
                   value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value.toUpperCase())}
+                  onChange={(e) =>
+                    setCustomerName(e.target.value.toUpperCase())
+                  }
                   placeholder="Enter customer name"
                   required
                 />
@@ -291,9 +324,7 @@ const AssignWork: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-popover border border-border z-50">
                   <SelectItem value="form_filling">Online Service</SelectItem>
-                  <SelectItem value="xerox">
-                    Offline Service
-                  </SelectItem>
+                  <SelectItem value="xerox">Offline Service</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -320,8 +351,37 @@ const AssignWork: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Board Name</Label>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                  <Select
+                    value={boardName}
+                    onValueChange={(value) => setBoardName(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Board" />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      {boards.map((b) => (
+                        <SelectItem key={b} value={b}>
+                          {b}
+                        </SelectItem>
+                      ))}
+
+                      <SelectItem value="custom">Custom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {boardName === "custom" && (
+                  <Input
+                    placeholder="Enter board name"
+                    value={customBoard}
+                    onChange={(e) => setCustomBoard(e.target.value)}
+                  />
+                )}
+                <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
                     <Label htmlFor="applicationId">Application ID</Label>
                     <Input

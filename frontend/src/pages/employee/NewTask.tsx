@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,12 +31,16 @@ const NewTask: React.FC = () => {
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
 
+  // const [formServiceTypee, setFormServiceTypee]; = useState("");
+
   // Service selection
   const [serviceType, setServiceType] = useState<ServiceType | "">("");
   const [formServiceType, setFormServiceType] = useState<FormServiceType | "">(
     "",
   );
-
+  const [boards, setBoards] = useState<string[]>([]);
+  const [boardName, setBoardName] = useState("");
+  const [customBoard, setCustomBoard] = useState("");
   // Form filling specific
   const [applicationId, setApplicationId] = useState("");
   const [password, setPassword] = useState("");
@@ -53,6 +57,15 @@ const NewTask: React.FC = () => {
     const deduction = parseFloat(deductionAmount) || 0;
     return total - deduction;
   }, [amount, deductionAmount]);
+
+  useEffect(() => {
+    const fetchBoards = async () => {
+      const res = await api.get("/boards");
+      setBoards(res.data.map((b: any) => b.name));
+    };
+
+    fetchBoards();
+  }, []);
 
   // 🔧 LOGIC FIX (async + await, UI untouched)
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,11 +100,19 @@ const NewTask: React.FC = () => {
       const deduction = parseFloat(deductionAmount) || 0;
       const calculatedRevenue = totalAmount - deduction;
 
+      let finalBoard = boardName;
+
+      if (boardName === "custom") {
+        await api.post("/boards", { name: customBoard });
+        finalBoard = customBoard;
+      }
+
       if (serviceType === "form_filling") {
         await api.post("/tasks", {
           customer_id: customer.id,
           service_type: "form_filling",
           form_service_type: formServiceType,
+          board_name: finalBoard,
           application_id: applicationId, // ✅ FIX
           application_password: password, // ✅ FIX
           description,
@@ -111,7 +132,6 @@ const NewTask: React.FC = () => {
           payment_mode: paymentMode,
         });
       }
-
       toast.success("Task created successfully!");
       navigate("/employee/my-tasks");
     } catch (err) {
@@ -209,9 +229,7 @@ const NewTask: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-popover border border-border z-50">
                   <SelectItem value="form_filling">Online Work</SelectItem>
-                  <SelectItem value="xerox">
-                    Offline Work
-                  </SelectItem>
+                  <SelectItem value="xerox">Offline Work</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -238,7 +256,35 @@ const NewTask: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Board Name</Label>
 
+                  <Select
+                    value={boardName}
+                    onValueChange={(value) => setBoardName(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Board" />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      {boards.map((b) => (
+                        <SelectItem key={b} value={b}>
+                          {b}
+                        </SelectItem>
+                      ))}
+
+                      <SelectItem value="custom">Custom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {boardName === "custom" && (
+                  <Input
+                    placeholder="Enter board name"
+                    value={customBoard}
+                    onChange={(e) => setCustomBoard(e.target.value)}
+                  />
+                )}
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="applicationId">Application ID</Label>

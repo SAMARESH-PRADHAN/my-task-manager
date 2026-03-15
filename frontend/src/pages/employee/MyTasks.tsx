@@ -45,6 +45,8 @@ const MyTasks: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<
     "all" | "pending" | "completed"
   >("all");
+  const [boards, setBoards] = useState<string[]>([]);
+  const [boardFilter, setBoardFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   // Edit modal states
@@ -57,6 +59,7 @@ const MyTasks: React.FC = () => {
     customerPhone: "",
     customerEmail: "",
     description: "",
+    boardName: "",
     amount: 0,
     deductionAmount: 0,
     revenue: 0,
@@ -74,7 +77,9 @@ const MyTasks: React.FC = () => {
   );
 
   // Backend task state
-  const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>([]);
+  const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>(
+    [],
+  );
   const [xeroxTasks, setXeroxTasks] = useState<XeroxTask[]>([]);
 
   const fetchMyTasks = async () => {
@@ -96,13 +101,15 @@ const MyTasks: React.FC = () => {
           revenue: Number(t.revenue || 0),
           description: t.description || "",
           paymentMode: t.payment_mode || "",
-          paymentStatus: t.payment_status === "unpaid" ? "pending" : t.payment_status,
+          paymentStatus:
+            t.payment_status === "unpaid" ? "pending" : t.payment_status,
           createdAt: t.created_at,
         };
 
         if (t.service_type === "form_filling") {
           ff.push({
             ...base,
+            boardName: t.board_name || "",
             customerType: t.customer_type || "",
             employeeId: String(t.employee_id),
             employeeName: user?.name || "",
@@ -136,7 +143,18 @@ const MyTasks: React.FC = () => {
     if (!user) return;
     fetchMyTasks();
   }, [user]);
+  useEffect(() => {
+    const fetchBoards = async () => {
+      try {
+        const res = await api.get("/boards");
+        setBoards(res.data.map((b: any) => b.name));
+      } catch (err) {
+        console.error("Failed to load boards", err);
+      }
+    };
 
+    fetchBoards();
+  }, []);
   const employeeTasks = {
     formFilling: formFillingTasks,
     xerox: xeroxTasks,
@@ -163,9 +181,16 @@ const MyTasks: React.FC = () => {
 
       const matchesStatus = statusFilter === "all" || status === statusFilter;
 
-      return matchesSearch && matchesStatus;
+      const matchesBoard =
+        activeTab !== "form_filling" ||
+        boardFilter === "" ||
+        ((task as FormFillingTask).boardName || "")
+          .toLowerCase()
+          .includes(boardFilter.toLowerCase());
+
+      return matchesSearch && matchesStatus && matchesBoard;
     });
-  }, [activeTab, employeeTasks, searchQuery, statusFilter]);
+  }, [activeTab, employeeTasks, searchQuery, statusFilter, boardFilter]);
 
   const totalPages = Math.ceil(filteredTasks.length / ITEMS_PER_PAGE);
   const paginatedTasks = filteredTasks.slice(
@@ -190,6 +215,10 @@ const MyTasks: React.FC = () => {
         activeTab === "form_filling"
           ? (task as FormFillingTask).serviceType
           : "job_seeker",
+      boardName:
+        activeTab === "form_filling"
+          ? ((task as FormFillingTask).boardName ?? "")
+          : "",
       applicationId:
         activeTab === "form_filling"
           ? ((task as FormFillingTask).applicationId ?? "")
@@ -217,6 +246,8 @@ const MyTasks: React.FC = () => {
         payment_status: editFormData.paymentStatus,
         form_service_type:
           activeTab === "form_filling" ? editFormData.serviceType : null,
+        board_name:
+          activeTab === "form_filling" ? editFormData.boardName : null,
         application_id:
           activeTab === "form_filling" ? editFormData.applicationId : null,
         application_password:
@@ -300,15 +331,30 @@ const MyTasks: React.FC = () => {
       <div className="flex gap-4">
         <Button
           variant={activeTab === "form_filling" ? "default" : "outline"}
-          onClick={() => { setActiveTab("form_filling"); setCurrentPage(1); }}
-          className={activeTab === "form_filling" ? "gradient-primary text-primary-foreground" : ""}
+          onClick={() => {
+            setActiveTab("form_filling");
+            setBoardFilter("");
+            setCurrentPage(1);
+          }}
+          className={
+            activeTab === "form_filling"
+              ? "gradient-primary text-primary-foreground"
+              : ""
+          }
         >
           Online Service
         </Button>
         <Button
           variant={activeTab === "xerox" ? "default" : "outline"}
-          onClick={() => { setActiveTab("xerox"); setCurrentPage(1); }}
-          className={activeTab === "xerox" ? "gradient-primary text-primary-foreground" : ""}
+          onClick={() => {
+            setActiveTab("xerox");
+            setCurrentPage(1);
+          }}
+          className={
+            activeTab === "xerox"
+              ? "gradient-primary text-primary-foreground"
+              : ""
+          }
         >
           Offline Service
         </Button>
@@ -319,9 +365,23 @@ const MyTasks: React.FC = () => {
         <Input
           placeholder="Search by customer name or phone or desc..."
           value={searchQuery}
-          onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
           className="max-w-sm"
         />
+        {activeTab === "form_filling" && (
+          <Input
+            placeholder="Search by Board..."
+            value={boardFilter}
+            onChange={(e) => {
+              setBoardFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="max-w-sm"
+          />
+        )}
         <Select
           value={statusFilter}
           onValueChange={(value) => {
@@ -377,6 +437,11 @@ const MyTasks: React.FC = () => {
                 <TableHead>Revenue</TableHead>
                 <TableHead>Description</TableHead>
                 {activeTab === "form_filling" && (
+                  <>
+                    <TableHead>Board</TableHead> {/* ✅ NEW */}
+                  </>
+                )}
+                {activeTab === "form_filling" && (
                   <TableHead>Work Status</TableHead>
                 )}
                 <TableHead>Payment</TableHead>
@@ -417,25 +482,33 @@ const MyTasks: React.FC = () => {
                         </p>
                         {activeTab === "form_filling" && (
                           <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary capitalize">
-                            {(task as FormFillingTask).serviceType?.replace("_", " ")}
+                            {(task as FormFillingTask).serviceType?.replace(
+                              "_",
+                              " ",
+                            )}
                           </span>
                         )}
                       </div>
                     </TableCell>
 
                     {activeTab === "form_filling" && (
-                      <TableCell>
-                        <div className="text-sm space-y-1">
-                          <p>
-                            <span className="font-medium">App ID:</span>{" "}
-                            {(task as FormFillingTask).applicationId || "-"}
-                          </p>
-                          <p>
-                            <span className="font-medium">Password:</span>{" "}
-                            {(task as FormFillingTask).password || "-"}
-                          </p>
-                        </div>
-                      </TableCell>
+                      <>
+                        <TableCell>
+                          <div className="text-sm space-y-1">
+                            <p>
+                              <span className="font-medium">App ID:</span>{" "}
+                              {(task as FormFillingTask).applicationId || "-"}
+                            </p>
+                            <p>
+                              <span className="font-medium">Password:</span>{" "}
+                              {(task as FormFillingTask).password || "-"}
+                            </p>
+                          </div>
+                        </TableCell>
+                        {/* <TableCell>
+                          {(task as FormFillingTask).boardName || "-"}
+                        </TableCell> */}
+                      </>
                     )}
 
                     <TableCell>₹{task.amount}</TableCell>
@@ -446,7 +519,11 @@ const MyTasks: React.FC = () => {
                     <TableCell className="max-w-[200px] truncate">
                       {task.description || "-"}
                     </TableCell>
-
+                    {activeTab === "form_filling" && (
+                      <TableCell>
+                        {(task as FormFillingTask).boardName || "-"}
+                      </TableCell>
+                    )}
                     {activeTab === "form_filling" && (
                       <TableCell>
                         <Button
@@ -458,14 +535,15 @@ const MyTasks: React.FC = () => {
                               : "bg-warning/20 text-warning hover:bg-warning/30"
                           }
                           onClick={() => {
-                            if ((task as FormFillingTask).workStatus === "pending") {
+                            if (
+                              (task as FormFillingTask).workStatus === "pending"
+                            ) {
                               handleUploadClick(task as FormFillingTask);
                             }
                           }}
                         >
-                          {(task as FormFillingTask).workStatus === "pending" && (
-                            <Upload className="h-4 w-4 mr-1" />
-                          )}
+                          {(task as FormFillingTask).workStatus ===
+                            "pending" && <Upload className="h-4 w-4 mr-1" />}
                           {(task as FormFillingTask).workStatus}
                         </Button>
                       </TableCell>
@@ -525,7 +603,10 @@ const MyTasks: React.FC = () => {
                   <Input
                     value={editFormData.customerName}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, customerName: e.target.value })
+                      setEditFormData({
+                        ...editFormData,
+                        customerName: e.target.value,
+                      })
                     }
                   />
                 </div>
@@ -537,8 +618,13 @@ const MyTasks: React.FC = () => {
                     maxLength={10}
                     value={editFormData.customerPhone}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, 10);
-                      setEditFormData({ ...editFormData, customerPhone: value });
+                      const value = e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 10);
+                      setEditFormData({
+                        ...editFormData,
+                        customerPhone: value,
+                      });
                     }}
                   />
                 </div>
@@ -548,23 +634,31 @@ const MyTasks: React.FC = () => {
                     type="email"
                     value={editFormData.customerEmail}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, customerEmail: e.target.value.toLowerCase() })
+                      setEditFormData({
+                        ...editFormData,
+                        customerEmail: e.target.value.toLowerCase(),
+                      })
                     }
                   />
                 </div>
               </div>
 
               {activeTab === "form_filling" && (
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-4">
                   <div className="space-y-2">
                     <Label>Service Type</Label>
                     <Select
                       value={editFormData.serviceType}
                       onValueChange={(value) =>
-                        setEditFormData({ ...editFormData, serviceType: value as any })
+                        setEditFormData({
+                          ...editFormData,
+                          serviceType: value as any,
+                        })
                       }
                     >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent className="bg-popover border border-border z-50">
                         <SelectItem value="job_seeker">Job Seeker</SelectItem>
                         <SelectItem value="student">Student</SelectItem>
@@ -573,11 +667,39 @@ const MyTasks: React.FC = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
+                    <Label>Board</Label>
+
+                    <Select
+                      value={editFormData.boardName || ""}
+                      onValueChange={(value) =>
+                        setEditFormData({
+                          ...editFormData,
+                          boardName: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Board" />
+                      </SelectTrigger>
+
+                      <SelectContent className="bg-popover border border-border z-50">
+                        {boards.map((b) => (
+                          <SelectItem key={b} value={b}>
+                            {b}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <Label>Application ID</Label>
                     <Input
                       value={editFormData.applicationId}
                       onChange={(e) =>
-                        setEditFormData({ ...editFormData, applicationId: e.target.value })
+                        setEditFormData({
+                          ...editFormData,
+                          applicationId: e.target.value,
+                        })
                       }
                     />
                   </div>
@@ -586,7 +708,10 @@ const MyTasks: React.FC = () => {
                     <Input
                       value={editFormData.password}
                       onChange={(e) =>
-                        setEditFormData({ ...editFormData, password: e.target.value })
+                        setEditFormData({
+                          ...editFormData,
+                          password: e.target.value,
+                        })
                       }
                     />
                   </div>
@@ -598,7 +723,10 @@ const MyTasks: React.FC = () => {
                 <Textarea
                   value={editFormData.description}
                   onChange={(e) =>
-                    setEditFormData({ ...editFormData, description: e.target.value.toUpperCase() })
+                    setEditFormData({
+                      ...editFormData,
+                      description: e.target.value.toUpperCase(),
+                    })
                   }
                   rows={3}
                 />
@@ -612,7 +740,8 @@ const MyTasks: React.FC = () => {
                     placeholder="Enter amount"
                     value={editFormData.amount === 0 ? "" : editFormData.amount}
                     onChange={(e) => {
-                      const value = e.target.value === "" ? 0 : Number(e.target.value);
+                      const value =
+                        e.target.value === "" ? 0 : Number(e.target.value);
                       setEditFormData({
                         ...editFormData,
                         amount: value,
@@ -626,9 +755,14 @@ const MyTasks: React.FC = () => {
                   <Input
                     type="number"
                     placeholder="Enter deduction"
-                    value={editFormData.deductionAmount === 0 ? "" : editFormData.deductionAmount}
+                    value={
+                      editFormData.deductionAmount === 0
+                        ? ""
+                        : editFormData.deductionAmount
+                    }
                     onChange={(e) => {
-                      const value = e.target.value === "" ? 0 : Number(e.target.value);
+                      const value =
+                        e.target.value === "" ? 0 : Number(e.target.value);
                       setEditFormData({
                         ...editFormData,
                         deductionAmount: value,
@@ -657,7 +791,9 @@ const MyTasks: React.FC = () => {
                       })
                     }
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent className="bg-popover border border-border z-50">
                       <SelectItem value="none">Not Selected</SelectItem>
                       <SelectItem value="cash">Cash</SelectItem>
@@ -671,10 +807,15 @@ const MyTasks: React.FC = () => {
                   <Select
                     value={editFormData.paymentStatus}
                     onValueChange={(value) =>
-                      setEditFormData({ ...editFormData, paymentStatus: value as any })
+                      setEditFormData({
+                        ...editFormData,
+                        paymentStatus: value as any,
+                      })
                     }
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent className="bg-popover border border-border z-50">
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
@@ -684,7 +825,10 @@ const MyTasks: React.FC = () => {
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditModalOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button
