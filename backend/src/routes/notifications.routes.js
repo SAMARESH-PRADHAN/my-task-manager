@@ -22,11 +22,11 @@ router.post("/", auth, async (req, res) => {
 
     if (targetType === "all") {
       customers = await sql`
-        SELECT phone FROM custo WHERE phone IS NOT NULL
+        SELECT phone FROM customers WHERE phone IS NOT NULL
       `;
     } else {
       customers = await sql`
-        SELECT phone FROM custo 
+        SELECT phone FROM customers 
         WHERE type = ${targetType} AND phone IS NOT NULL
       `;
     }
