@@ -50,6 +50,7 @@ const AssignWork: React.FC = () => {
   const [amount, setAmount] = useState("");
   const [deductionAmount, setDeductionAmount] = useState("");
   const [paymentMode, setPaymentMode] = useState<PaymentMode | "">("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Calculate revenue
   const revenue = useMemo(() => {
@@ -170,6 +171,7 @@ const AssignWork: React.FC = () => {
       return;
     }
     try {
+      setIsSubmitting(true); // 🔹 disable button here
       let finalBoard = boardName;
 
       if (boardName === "custom") {
@@ -208,6 +210,7 @@ const AssignWork: React.FC = () => {
     } catch (err) {
       console.error(err);
       toast.error("Failed to assign task");
+      setIsSubmitting(false); // 🔹 re-enable button on error
     }
   };
 
@@ -403,7 +406,16 @@ const AssignWork: React.FC = () => {
                 </div>
               </>
             )}
-
+            <div className="space-y-2">
+              <Label htmlFor="description">Work Description</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value.toUpperCase())}
+                placeholder="ENTER WORK DESCRIPTION"
+                rows={3}
+              />
+            </div>
             <div className="space-y-2">
               <Label>Payment Mode</Label>
               <Select
@@ -419,17 +431,6 @@ const AssignWork: React.FC = () => {
                   <SelectItem value="card">Card</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Work Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value.toUpperCase())}
-                placeholder="ENTER WORK DESCRIPTION"
-                rows={3}
-              />
             </div>
 
             {/* Amount Section */}
@@ -474,8 +475,10 @@ const AssignWork: React.FC = () => {
           <Button
             type="submit"
             className="gradient-primary text-primary-foreground"
+            disabled={isSubmitting} // 🔹 disable while submitting
           >
-            Assign Task
+            {isSubmitting ? "Submitting..." : "Assign Task"} // 🔹 show loading
+            text
           </Button>
         </div>
       </form>

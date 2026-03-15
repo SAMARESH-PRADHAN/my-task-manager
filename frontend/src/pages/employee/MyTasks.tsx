@@ -50,6 +50,7 @@ const MyTasks: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Edit modal states
+  const [isUpdating, setIsUpdating] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<
     FormFillingTask | XeroxTask | null
@@ -237,6 +238,7 @@ const MyTasks: React.FC = () => {
 
   const handleUpdateTask = async () => {
     if (!editingTask) return;
+    setIsUpdating(true); // ✅ start loading
 
     try {
       await api.put(`/tasks/${editingTask.id}`, {
@@ -268,6 +270,8 @@ const MyTasks: React.FC = () => {
     } catch (err) {
       console.error(err);
       toast.error("Failed to update task");
+    } finally {
+      setIsUpdating(false); // ✅ end loading
     }
   };
 
@@ -434,17 +438,19 @@ const MyTasks: React.FC = () => {
                 <TableHead>S.No</TableHead>
                 <TableHead>Customer Details</TableHead>
                 {activeTab === "form_filling" && (
+                  <>
+                    <TableHead>Board</TableHead> {/* ✅ NEW */}
+                  </>
+                )}
+                <TableHead>Description</TableHead>
+                {activeTab === "form_filling" && (
                   <TableHead>Application Details</TableHead>
                 )}
                 <TableHead>Total Amount</TableHead>
                 <TableHead>Deduction</TableHead>
                 <TableHead>Revenue</TableHead>
-                <TableHead>Description</TableHead>
-                {activeTab === "form_filling" && (
-                  <>
-                    <TableHead>Board</TableHead> {/* ✅ NEW */}
-                  </>
-                )}
+                
+                
                 {activeTab === "form_filling" && (
                   <TableHead>Work Status</TableHead>
                 )}
@@ -494,7 +500,15 @@ const MyTasks: React.FC = () => {
                         )}
                       </div>
                     </TableCell>
-
+{activeTab === "form_filling" && (
+                      <TableCell>
+                        {(task as FormFillingTask).boardName || "-"}
+                      </TableCell>
+                    )}
+                    <TableCell className="max-w-[200px] truncate">
+                      {task.description || "-"}
+                    </TableCell>
+                    
                     {activeTab === "form_filling" && (
                       <>
                         <TableCell>
@@ -520,14 +534,7 @@ const MyTasks: React.FC = () => {
                     <TableCell className="font-semibold text-primary">
                       ₹{task.revenue || task.amount}
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate">
-                      {task.description || "-"}
-                    </TableCell>
-                    {activeTab === "form_filling" && (
-                      <TableCell>
-                        {(task as FormFillingTask).boardName || "-"}
-                      </TableCell>
-                    )}
+                    
                     {activeTab === "form_filling" && (
                       <TableCell>
                         <Button
@@ -841,8 +848,9 @@ const MyTasks: React.FC = () => {
                 <Button
                   onClick={handleUpdateTask}
                   className="gradient-primary text-primary-foreground"
+                  disabled={isUpdating} // disable while updating
                 >
-                  Update
+                  {isUpdating ? "Updating..." : "Update"}
                 </Button>
               </div>
             </div>

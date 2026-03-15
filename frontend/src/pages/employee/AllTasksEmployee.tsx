@@ -70,6 +70,9 @@ const AllTasksEmployee: React.FC = () => {
   const [toDate, setToDate] = useState<Date | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [isUpdatingFormTask, setIsUpdatingFormTask] = useState(false);
+  const [isUpdatingXeroxTask, setIsUpdatingXeroxTask] = useState(false);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, statusFilter, searchQuery, boardFilter, fromDate, toDate]);
@@ -251,23 +254,38 @@ const AllTasksEmployee: React.FC = () => {
 
   const handleEditFormTask = async () => {
     if (!editingFormTask) return;
+    setIsUpdatingFormTask(true); // start loading
 
     try {
-      await updateTask(editingFormTask.id, editingFormTask);
+      await updateTask(editingFormTask.id, {
+        ...editingFormTask,
+        employeeId: editingFormTask.employeeId, // ✅ VERY IMPORTANT
+      });
+
       toast.success("Task updated successfully!");
       setIsEditModalOpen(false);
       setEditingFormTask(null);
     } catch {
       toast.error("Failed to update task");
+    } finally {
+      setIsUpdatingFormTask(false); // stop loading
     }
   };
 
-  const handleEditXeroxTask = () => {
+  const handleEditXeroxTask = async () => {
     if (!editingXeroxTask) return;
-    updateXeroxTask(editingXeroxTask.id, editingXeroxTask);
-    toast.success("Task updated successfully!");
-    setIsEditModalOpen(false);
-    setEditingXeroxTask(null);
+    setIsUpdatingXeroxTask(true);
+
+    try {
+      await updateXeroxTask(editingXeroxTask.id, editingXeroxTask);
+      toast.success("Task updated successfully!");
+      setIsEditModalOpen(false);
+      setEditingXeroxTask(null);
+    } catch {
+      toast.error("Failed to update task");
+    } finally {
+      setIsUpdatingXeroxTask(false);
+    }
   };
 
   const handleDeleteTask = async () => {
@@ -441,10 +459,11 @@ const AllTasksEmployee: React.FC = () => {
                   <TableRow>
                     <TableHead>S.No</TableHead>
                     <TableHead>Customer Details</TableHead>
-                    <TableHead>Board</TableHead>
                     <TableHead>Employee</TableHead>
-                    <TableHead>Application Details</TableHead>
+                    <TableHead>Board</TableHead>
                     <TableHead>Description</TableHead>
+                    <TableHead>Application Details</TableHead>
+
                     <TableHead>Work Status</TableHead>
                     <TableHead>Payment Status</TableHead>
                     <TableHead>Total Amount</TableHead>
@@ -499,11 +518,14 @@ const AllTasksEmployee: React.FC = () => {
                             </span>
                           </div>
                         </TableCell>
+                        <TableCell>{task.employeeName}</TableCell>
                         {/* <TableCell className="capitalize">
                           {(task.serviceType ?? "unknown").replace("_", " ")}
                         </TableCell> */}
                         <TableCell>{task.boardName || "-"}</TableCell>
-                        <TableCell>{task.employeeName}</TableCell>
+                        <TableCell className="max-w-[150px] truncate">
+                          {task.description || "-"}
+                        </TableCell>
                         <TableCell>
                           <div className="space-y-1 text-sm">
                             <p>
@@ -524,9 +546,7 @@ const AllTasksEmployee: React.FC = () => {
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell className="max-w-[150px] truncate">
-                          {task.description || "-"}
-                        </TableCell>
+
                         <TableCell>
                           <span
                             className={`px-2 py-1 rounded-full text-xs ${
@@ -957,8 +977,9 @@ const AllTasksEmployee: React.FC = () => {
                 <Button
                   onClick={handleEditFormTask}
                   className="gradient-primary text-primary-foreground"
+                  disabled={isUpdatingFormTask}
                 >
-                  Update
+                  {isUpdatingFormTask ? "Updating..." : "Update"}
                 </Button>
               </div>
             </div>
@@ -1101,8 +1122,9 @@ const AllTasksEmployee: React.FC = () => {
                 <Button
                   onClick={handleEditXeroxTask}
                   className="gradient-primary text-primary-foreground"
+                  disabled={isUpdatingXeroxTask}
                 >
-                  Update
+                  {isUpdatingXeroxTask ? "Updating..." : "Update"}
                 </Button>
               </div>
             </div>
