@@ -6,10 +6,24 @@ const router = express.Router();
 
 /* GET ALL BOARDS */
 router.get("/", auth, async (req, res) => {
+  const { service_type } = req.query;
+
   try {
-    const boards = await sql`
-      SELECT * FROM boards ORDER BY name
-    `;
+    let boards;
+
+    if (service_type) {
+      boards = await sql`
+        SELECT * FROM boards
+        WHERE service_type = ${service_type}
+        ORDER BY name
+      `;
+    } else {
+      boards = await sql`
+        SELECT * FROM boards
+        ORDER BY name
+      `;
+    }
+
     res.json(boards);
   } catch (err) {
     console.error(err);
@@ -19,12 +33,12 @@ router.get("/", auth, async (req, res) => {
 
 /* CREATE BOARD */
 router.post("/", auth, async (req, res) => {
-  const { name } = req.body;
+  const { name, service_type  } = req.body;
 
   try {
     const result = await sql`
-      INSERT INTO boards (name)
-      VALUES (${name})
+      INSERT INTO boards (name, service_type)
+      VALUES (${name}, ${service_type})
       ON CONFLICT (name) DO NOTHING
       RETURNING *
     `;

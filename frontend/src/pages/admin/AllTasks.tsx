@@ -118,6 +118,11 @@ const AllTasks: React.FC = () => {
     null,
   );
 
+  //notification confirmation
+  const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [sendingNotification, setSendingNotification] = useState(false);
+
   // Delete confirmation
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
@@ -149,7 +154,14 @@ const AllTasks: React.FC = () => {
 
       return true;
     });
-  }, [formFillingTasks, statusFilter, searchQuery, fromDate, toDate, boardFilter]);
+  }, [
+    formFillingTasks,
+    statusFilter,
+    searchQuery,
+    fromDate,
+    toDate,
+    boardFilter,
+  ]);
 
   const filteredXeroxTasks = useMemo(() => {
     return xeroxTasks.filter((task) => {
@@ -187,18 +199,18 @@ const AllTasks: React.FC = () => {
       setCurrentPage(totalPages || 1);
     }
   }, [totalPages]);
-  useEffect(() => {
-    const fetchBoards = async () => {
-      try {
-        const res = await api.get("/boards");
-        setBoards(res.data);
-      } catch (err) {
-        console.error("Failed to load boards", err);
-      }
-    };
+  const fetchBoards = async (serviceType?: string) => {
+    try {
+      const url = serviceType
+        ? `/boards?service_type=${serviceType}`
+        : "/boards";
 
-    fetchBoards();
-  }, []);
+      const res = await api.get(url);
+      setBoards(res.data);
+    } catch (err) {
+      console.error("Failed to load boards", err);
+    }
+  };
   const paginatedTasks = currentTasks.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE,
@@ -244,6 +256,41 @@ const AllTasks: React.FC = () => {
       downloadExcel(data, "xerox_tasks");
     }
     toast.success("Tasks exported successfully!");
+  };
+
+  //this function is use to send filter task notification system
+  const handleNotifyFiltered = async () => {
+    if (!notificationMessage.trim()) {
+      toast.error("Please enter notification message");
+      return;
+    }
+
+    try {
+      setSendingNotification(true);
+
+      const phones =
+        activeTab === "form_filling"
+          ? filteredFormFillingTasks.map((t) => t.customerPhone)
+          : filteredXeroxTasks.map((t) => t.customerPhone);
+
+      // Remove duplicate numbers
+      const uniquePhones = [...new Set(phones.filter(Boolean))];
+
+      await api.post("/task-notifications", {
+        message: notificationMessage,
+        phones: uniquePhones,
+      });
+
+      toast.success(`Notification sent to ${uniquePhones.length} customers`);
+
+      setNotificationMessage("");
+      setIsNotifyModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to send notifications");
+    } finally {
+      setSendingNotification(false);
+    }
   };
 
   const handleFormTaskAmountChange = (
@@ -425,7 +472,12 @@ const AllTasks: React.FC = () => {
           Download Excel
         </Button>
       </div>
-
+      <Button
+        onClick={() => setIsNotifyModalOpen(true)}
+        className="gradient-primary text-primary-foreground"
+      >
+        Notify Customers
+      </Button>
       {/* Table */}
       <Card className="shadow-card relative group">
         <div className="absolute left-2 top-1/2 -translate-y-1/2 z-30 invisible group-hover:visible">
@@ -582,6 +634,10 @@ const AllTasks: React.FC = () => {
                               variant="ghost"
                               onClick={() => {
                                 setEditingFormTask(task);
+
+                                // load boards based on this task's service type
+                                fetchBoards(task.serviceType);
+
                                 setIsEditModalOpen(true);
                               }}
                             >
@@ -832,28 +888,61 @@ const AllTasks: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-  <Label>Board</Label>
-  <Select
-    value={editingFormTask.boardName || ""}
-    onValueChange={(value) =>
-      setEditingFormTask({
-        ...editingFormTask,
-        boardName: value,
-      })
-    }
-  >
-    <SelectTrigger>
-      <SelectValue placeholder="Select board" />
-    </SelectTrigger>
-    <SelectContent>
-      {boards.map((b) => (
-        <SelectItem key={b.id} value={b.name}>
-          {b.name}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
+                  <Label>Service Type</Label>
+
+                  <Select
+                    value={editingFormTask.serviceType || ""}
+                    onValueChange={(value) => {
+                      const serviceType = value as
+                        | "job_seeker"
+                        | "student"
+                        | "gov_scheme";
+
+                      setEditingFormTask({
+                        ...editingFormTask,
+                        serviceType,
+                        boardName: "",
+                      });
+
+                      fetchBoards(serviceType); // load boards for selected service type
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select service type" />
+                    </SelectTrigger>
+
+                    <SelectContent className="bg-popover border border-border z-50">
+                      <SelectItem value="job_seeker">Job Seeker</SelectItem>
+                      <SelectItem value="student">Student</SelectItem>
+                      <SelectItem value="gov_scheme">
+                        Government Scheme
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Board</Label>
+                  <Select
+                    value={editingFormTask.boardName || ""}
+                    onValueChange={(value) =>
+                      setEditingFormTask({
+                        ...editingFormTask,
+                        boardName: value,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select board" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {boards.map((b) => (
+                        <SelectItem key={b.id} value={b.name}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2">
                   <Label>Application ID</Label>
                   <Input
@@ -1215,6 +1304,51 @@ const AllTasks: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/*notification box*/}
+      <Dialog open={isNotifyModalOpen} onOpenChange={setIsNotifyModalOpen}>
+        <DialogContent className="bg-card border border-border max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Send Notification</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              This message will be sent to all customers currently visible in
+              the filtered list.
+            </div>
+
+            <div className="space-y-2">
+              <Label>Notification Message</Label>
+              <Textarea
+                placeholder="Type your notification message..."
+                value={notificationMessage}
+                onChange={(e) => setNotificationMessage(e.target.value)}
+                rows={4}
+              />
+            </div>
+            <div className="text-sm text-primary font-medium">
+              Recipients: {currentTasks.length} customers
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setIsNotifyModalOpen(false)}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                onClick={handleNotifyFiltered}
+                disabled={sendingNotification}
+                className="gradient-primary text-primary-foreground"
+              >
+                {sendingNotification ? "Sending..." : "Send Notification"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

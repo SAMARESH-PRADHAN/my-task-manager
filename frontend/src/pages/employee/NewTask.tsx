@@ -60,12 +60,14 @@ const NewTask: React.FC = () => {
 
   useEffect(() => {
     const fetchBoards = async () => {
-      const res = await api.get("/boards");
+      if (!formServiceType) return;
+
+      const res = await api.get(`/boards?service_type=${formServiceType}`);
       setBoards(res.data.map((b: any) => b.name));
     };
 
     fetchBoards();
-  }, []);
+  }, [formServiceType]);
 
   // 🔧 LOGIC FIX (async + await, UI untouched)
   const handleSubmit = async (e: React.FormEvent) => {
@@ -103,7 +105,7 @@ const NewTask: React.FC = () => {
       let finalBoard = boardName;
 
       if (boardName === "custom") {
-        await api.post("/boards", { name: customBoard });
+        await api.post("/boards", { name: customBoard, service_type: formServiceType,});
         finalBoard = customBoard;
       }
 
