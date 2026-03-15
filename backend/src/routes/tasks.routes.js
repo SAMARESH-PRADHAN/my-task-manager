@@ -59,6 +59,7 @@ router.post("/", auth, async (req, res) => {
         employee_id,
         service_type,
         form_service_type,
+        board_name,
         application_id,
         application_password,
         description,
@@ -74,6 +75,7 @@ router.post("/", auth, async (req, res) => {
         ${employeeId},
         ${t.service_type},
         ${t.form_service_type},
+         ${t.board_name},
         ${t.application_id || null},
         ${t.application_password || null},
         ${t.description},
@@ -146,21 +148,28 @@ router.put("/:id", auth, async (req, res) => {
     const completedBy =
       t.completed_by != null && t.completed_by !== ""
         ? Number(t.completed_by)
-        : current.completed_by ?? null;
+        : (current.completed_by ?? null);
 
-    const applicationId       = t.application_id       ?? current.application_id;
-    const applicationPassword = t.application_password ?? current.application_password;
-    const description         = t.description          ?? current.description;
-    const totalAmount         = t.total_amount         != null ? Number(t.total_amount)    : current.total_amount;
-    const deductionAmount     = t.deduction_amount     != null ? Number(t.deduction_amount): current.deduction_amount;
-    const revenue             = t.revenue              != null ? Number(t.revenue)         : current.revenue;
-    const paymentStatus       = t.payment_status       ?? current.payment_status;
-    const paymentMode         = t.payment_mode         ?? current.payment_mode;
-    const formServiceType     = t.form_service_type    ?? current.form_service_type;
-    const workStatus          = t.work_status          ?? current.work_status;
-    const completedAt         = workStatus === "completed" && current.work_status !== "completed"
-      ? new Date()
-      : current.completed_at;
+    const applicationId = t.application_id ?? current.application_id;
+    const applicationPassword =
+      t.application_password ?? current.application_password;
+    const description = t.description ?? current.description;
+    const totalAmount =
+      t.total_amount != null ? Number(t.total_amount) : current.total_amount;
+    const deductionAmount =
+      t.deduction_amount != null
+        ? Number(t.deduction_amount)
+        : current.deduction_amount;
+    const revenue = t.revenue != null ? Number(t.revenue) : current.revenue;
+    const paymentStatus = t.payment_status ?? current.payment_status;
+    const paymentMode = t.payment_mode ?? current.payment_mode;
+    const formServiceType = t.form_service_type ?? current.form_service_type;
+    const boardName = t.board_name ?? current.board_name;
+    const workStatus = t.work_status ?? current.work_status;
+    const completedAt =
+      workStatus === "completed" && current.work_status !== "completed"
+        ? new Date()
+        : current.completed_at;
 
     await sql`
       UPDATE tasks SET
@@ -175,6 +184,7 @@ router.put("/:id", auth, async (req, res) => {
         payment_status       = ${paymentStatus},
         payment_mode         = ${paymentMode},
         form_service_type    = ${formServiceType},
+        board_name = ${boardName},
         work_status          = ${workStatus},
         completed_at         = ${completedAt}
       WHERE id = ${taskId}
@@ -182,7 +192,7 @@ router.put("/:id", auth, async (req, res) => {
 
     await sql`
       UPDATE customers SET
-        name  = COALESCE(${t.customer_name  ?? null}, name),
+        name  = COALESCE(${t.customer_name ?? null}, name),
         phone = COALESCE(${t.customer_phone ?? null}, phone),
         email = COALESCE(${t.customer_email ?? null}, email)
       WHERE id = (
@@ -260,7 +270,7 @@ router.post(
       console.error("UPLOAD SCREENSHOT ERROR:", err);
       res.status(500).json({ message: "Server error" });
     }
-  }
+  },
 );
 
 export default router;

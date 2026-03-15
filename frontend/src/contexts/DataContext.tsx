@@ -23,6 +23,7 @@ export interface FormFillingTask {
   id: string;
   customerId: string;
   customerName: string;
+  boardName?: string;
   customerEmail: string;
   customerPhone: string;
   customerType: "job_seeker" | "student" | "gov_scheme";
@@ -188,6 +189,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           serviceType: t.form_service_type ?? "unknown",
           applicationId: t.application_id || "",
           password: t.application_password || "",
+          boardName: t.board_name || "",
           amount: Number(t.total_amount ?? 0),
           deductionAmount: Number(t.deduction_amount ?? 0),
           revenue: Number(t.revenue ?? 0),
@@ -279,6 +281,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       employee_id: task.employeeId,
       service_type: "form_filling",
       form_service_type: task.serviceType,
+      board_name: task.boardName,
       application_id: task.applicationId,
       application_password: task.password,
       description: task.description,
@@ -311,6 +314,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   const updateTask = async (id: string, updates: any) => {
     try {
       await api.put(`/tasks/${id}`, {
+        board_name: updates.boardName,
         employee_id: updates.employeeId ?? undefined,          // ✅ reassign
         completed_by: updates.completedById ?? undefined,      // ✅ completed by
         customer_name: updates.customerName,

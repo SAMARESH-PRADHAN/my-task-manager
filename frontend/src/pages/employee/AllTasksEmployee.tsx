@@ -45,6 +45,8 @@ import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { formatToIST } from "@/utils/dateUtils";
 import { useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { api } from "@/lib/api";
+
 
 const ITEMS_PER_PAGE = 10;
 
@@ -63,14 +65,27 @@ const AllTasksEmployee: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TaskTab>("form_filling");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [boardFilter, setBoardFilter] = useState("");
+  const [boards, setBoards] = useState<string[]>([]);
   const [fromDate, setFromDate] = useState<Date | undefined>();
   const [toDate, setToDate] = useState<Date | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, statusFilter, searchQuery, fromDate, toDate]);
-
+  }, [activeTab, statusFilter, searchQuery, boardFilter, fromDate, toDate]);
+  useEffect(() => {
+      const fetchBoards = async () => {
+        try {
+          const res = await api.get("/boards");
+          setBoards(res.data.map((b: any) => b.name));
+        } catch (err) {
+          console.error("Failed to load boards", err);
+        }
+      };
+  
+      fetchBoards();
+    }, []);
   // Edit modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingFormTask, setEditingFormTask] =
@@ -101,6 +116,14 @@ const AllTasksEmployee: React.FC = () => {
 
       if (!matchesSearch) return false;
 
+      const matchesBoard =
+        boardFilter === "" ||
+        (task.boardName || "")
+          .toLowerCase()
+          .includes(boardFilter.toLowerCase());
+
+      if (!matchesBoard) return false;
+
       // Date filter
       if (fromDate && toDate) {
         const isInRange = isWithinInterval(new Date(task.createdAt), {
@@ -112,7 +135,14 @@ const AllTasksEmployee: React.FC = () => {
 
       return true;
     });
-  }, [formFillingTasks, statusFilter, searchQuery, fromDate, toDate]);
+  }, [
+    formFillingTasks,
+    statusFilter,
+    searchQuery,
+    boardFilter,
+    fromDate,
+    toDate,
+  ]);
 
   const filteredXeroxTasks = useMemo(() => {
     return xeroxTasks.filter((task) => {
@@ -169,6 +199,7 @@ const AllTasksEmployee: React.FC = () => {
         Phone: task.customerPhone,
         Email: task.customerEmail,
         "Service Type": (task.serviceType ?? "unknown").replace("_", " "),
+        Board: task.boardName || "-",
         Employee: task.employeeName,
         "Application ID": task.applicationId,
         Password: task.password,
@@ -354,6 +385,17 @@ const AllTasksEmployee: React.FC = () => {
             }}
             className="w-64"
           />
+          {activeTab === "form_filling" && (
+            <Input
+              placeholder="Search by Board..."
+              value={boardFilter}
+              onChange={(e) => {
+                setBoardFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-48"
+            />
+          )}
           <DateFilter
             fromDate={fromDate}
             toDate={toDate}
@@ -400,7 +442,7 @@ const AllTasksEmployee: React.FC = () => {
                   <TableRow>
                     <TableHead>S.No</TableHead>
                     <TableHead>Customer Details</TableHead>
-                    {/* <TableHead>Service Type</TableHead> */}
+                    <TableHead>Board</TableHead>
                     <TableHead>Employee</TableHead>
                     <TableHead>Application Details</TableHead>
                     <TableHead>Description</TableHead>
@@ -417,7 +459,7 @@ const AllTasksEmployee: React.FC = () => {
                   {(paginatedTasks as FormFillingTask[]).length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={12}
+                        colSpan={13}
                         className="text-center py-8 text-muted-foreground"
                       >
                         No tasks found
@@ -461,7 +503,7 @@ const AllTasksEmployee: React.FC = () => {
                         {/* <TableCell className="capitalize">
                           {(task.serviceType ?? "unknown").replace("_", " ")}
                         </TableCell> */}
-
+                        <TableCell>{task.boardName || "-"}</TableCell>
                         <TableCell>{task.employeeName}</TableCell>
                         <TableCell>
                           <div className="space-y-1 text-sm">
@@ -722,7 +764,31 @@ const AllTasksEmployee: React.FC = () => {
                     }
                   />
                 </div>
+<div className="space-y-2">
+                  <Label>Board</Label>
 
+                  <Select
+                    value={editingFormTask.boardName || ""}
+                    onValueChange={(value) =>
+                      setEditingFormTask({
+                        ...editingFormTask,
+                        boardName: value,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Board" />
+                    </SelectTrigger>
+
+                    <SelectContent className="bg-popover border border-border z-50">
+                      {boards.map((board) => (
+                        <SelectItem key={board} value={board}>
+                          {board}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2">
                   <Label>Application ID</Label>
                   <Input
@@ -735,6 +801,7 @@ const AllTasksEmployee: React.FC = () => {
                     }
                   />
                 </div>
+                
                 <div className="space-y-2">
                   <Label>Password</Label>
                   <Input
