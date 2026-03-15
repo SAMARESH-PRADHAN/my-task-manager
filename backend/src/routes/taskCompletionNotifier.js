@@ -28,20 +28,17 @@ export async function notifyTaskCompleted(taskId) {
     if (!task.customer_phone) return;
 
     const message = `
-Hello ${task.customer_name},
+Dear ${task.customer_name},
+Greetings and welocome to the Cyber City!
 
-Your application work has been successfully completed.
+We are happy to inform you that your ${task.board_name || "N/A"}
+application registration is submited successfully.
 
 Application Details:
 Application ID: ${task.application_id}
 Password: ${task.application_password}
 
-Board: ${task.board_name || "N/A"}
-Service: ${task.form_service_type || task.service_type}
-
-Handled By: ${task.employee_name || "Team"}
-
-If you need any help please contact us.
+Submited By: ${task.employee_name || "Team"}
 
 `;
 
