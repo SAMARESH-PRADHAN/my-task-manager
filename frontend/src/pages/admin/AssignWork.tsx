@@ -477,8 +477,7 @@ const AssignWork: React.FC = () => {
             className="gradient-primary text-primary-foreground"
             disabled={isSubmitting} // 🔹 disable while submitting
           >
-            {isSubmitting ? "Submitting..." : "Assign Task"} // 🔹 show loading
-            text
+            {isSubmitting ? "Submitting..." : "Assign Task"}
           </Button>
         </div>
       </form>

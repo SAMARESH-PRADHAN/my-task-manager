@@ -130,7 +130,13 @@ const AllTasks: React.FC = () => {
 
   const filteredFormFillingTasks = useMemo(() => {
     return formFillingTasks.filter((task) => {
-      if (boardFilter !== "all" && task.boardName !== boardFilter) return false;
+      if (
+        boardFilter !== "all" &&
+        !(task.boardName ?? "")
+          .toLowerCase()
+          .includes(boardFilter.toLowerCase())
+      )
+        return false;
       if (statusFilter !== "all" && task.workStatus !== statusFilter)
         return false;
 
@@ -454,19 +460,16 @@ const AllTasks: React.FC = () => {
             }}
             className="w-64"
           />
-          <Select value={boardFilter} onValueChange={setBoardFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Board" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Boards</SelectItem>
-              {boards.map((b) => (
-                <SelectItem key={b.id} value={b.name}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Input
+            placeholder="Search board..."
+            value={boardFilter === "all" ? "" : boardFilter}
+            onChange={(e) => {
+              const value = e.target.value;
+              setBoardFilter(value === "" ? "all" : value);
+              setCurrentPage(1);
+            }}
+            className="w-48"
+          />
           <DateFilter
             fromDate={fromDate}
             toDate={toDate}
