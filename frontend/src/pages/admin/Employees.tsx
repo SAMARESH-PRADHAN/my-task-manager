@@ -895,8 +895,8 @@ const Employees: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-popover border border-border z-50">
                   <SelectItem value="all">All Services</SelectItem>
-                  <SelectItem value="form_filling">Form Filling</SelectItem>
-                  <SelectItem value="xerox">Xerox/Other</SelectItem>
+                  <SelectItem value="form_filling">Online service</SelectItem>
+                  <SelectItem value="xerox">Offline service</SelectItem>
                 </SelectContent>
               </Select>
               <Button onClick={handleDownloadTasks} variant="outline">
