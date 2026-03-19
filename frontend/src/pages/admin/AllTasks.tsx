@@ -95,6 +95,8 @@ const AllTasks: React.FC = () => {
     updateTask,
     updateXeroxTask,
     deleteXeroxTask,
+    fetchTasksFromDB,
+    totalTasks,
   } = useData();
 
   const [activeTab, setActiveTab] = useState<TaskTab>("form_filling");
@@ -199,29 +201,46 @@ const AllTasks: React.FC = () => {
     activeTab === "form_filling"
       ? filteredFormFillingTasks
       : filteredXeroxTasks;
-  const totalPages = Math.ceil(currentTasks.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(totalTasks / ITEMS_PER_PAGE);
 
   useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages || 1);
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
     }
   }, [totalPages]);
+
+  useEffect(() => {
+    if (skipNextFetch.current) {
+      skipNextFetch.current = false;
+      return;
+    }
+    fetchTasksFromDB(currentPage, ITEMS_PER_PAGE);
+  }, [currentPage]);
+  const boardsCache = useRef<{ [key: string]: any[] }>({});
+  const skipNextFetch = useRef(false);
+
   const fetchBoards = async (serviceType?: string) => {
+    const key = serviceType || "all";
+
+    if (boardsCache.current[key]) {
+      setBoards(boardsCache.current[key]);
+      return;
+    }
+
     try {
       const url = serviceType
         ? `/boards?service_type=${serviceType}`
         : "/boards";
 
       const res = await api.get(url);
+
+      boardsCache.current[key] = res.data;
       setBoards(res.data);
     } catch (err) {
       console.error("Failed to load boards", err);
     }
   };
-  const paginatedTasks = currentTasks.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
-  );
+  const paginatedTasks = currentTasks;
 
   const handleDownload = () => {
     if (activeTab === "form_filling") {
@@ -353,6 +372,7 @@ const AllTasks: React.FC = () => {
   const handleDeleteTask = async () => {
     if (!deletingTaskId) return;
     try {
+      skipNextFetch.current = true;
       await deleteXeroxTask(deletingTaskId);
       toast.success("Task deleted successfully!");
     } catch {

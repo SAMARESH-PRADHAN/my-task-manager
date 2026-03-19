@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Plus,
   MoreVertical,
@@ -17,6 +17,7 @@ import {
   FormFillingTask,
   XeroxTask,
 } from "@/contexts/DataContext";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,11 +61,34 @@ const ITEMS_PER_PAGE = 6;
 const Employees: React.FC = () => {
   const {
     employees,
-    formFillingTasks,
-    xeroxTasks,
     addEmployee,
     updateEmployee,
   } = useData();
+
+  const [allTasks, setAllTasks] = useState<any[]>([]);
+
+  useEffect(() => {
+    api.get("/tasks/stats/employees").then((res) => {
+      // Flatten all tasks from all employees into one array
+      const flat: any[] = [];
+      Object.values(res.data).forEach((emp: any) => {
+        emp.tasks.forEach((t: any) => flat.push({
+          ...t,
+          employeeId: String(t.employee_id),
+          workStatus: t.work_status,
+          paymentStatus: t.payment_status === 'unpaid' ? 'pending' : t.payment_status,
+          serviceType: t.service_type,
+          createdAt: t.created_at,
+          revenue: Number(t.revenue || t.total_amount || 0),
+          amount: Number(t.total_amount || 0),
+        }));
+      });
+      setAllTasks(flat);
+    });
+  }, []);
+
+  const formFillingTasks = allTasks.filter(t => t.serviceType === 'form_filling');
+  const xeroxTasks = allTasks.filter(t => t.serviceType === 'xerox');
 
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);

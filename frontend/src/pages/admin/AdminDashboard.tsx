@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileText,
   IndianRupee,
@@ -10,6 +10,7 @@ import {
   Building,
 } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
+import { api } from "@/lib/api";
 import StatCard from "@/components/layout/shared/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
@@ -32,59 +33,23 @@ import {
 } from "recharts";
 
 const AdminDashboard: React.FC = () => {
-  const { formFillingTasks, xeroxTasks, employees, customers } = useData();
+  const { employees } = useData();
 
-  // Today's data
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const [stats, setStats] = useState<any>(null);
 
-  const todayFormFilling = formFillingTasks.filter(
-    (t) => new Date(t.createdAt) >= today
-  );
-  const todayXerox = xeroxTasks.filter((t) => new Date(t.createdAt) >= today);
+  useEffect(() => {
+    api.get("/tasks/stats/dashboard").then((res) => setStats(res.data));
+  }, []);
 
-  // Use revenue instead of amount for final amount
-  const todayRevenue =
-    todayFormFilling.reduce((sum, t) => sum + (t.revenue || t.amount), 0) +
-    todayXerox.reduce((sum, t) => sum + (t.revenue || t.amount), 0);
-
-  // Pending tasks count
-
-  // 1️⃣ Form Filling – work pending
-  const pendingFormWork = formFillingTasks.filter(
-    (t) => t.workStatus === "pending"
-  );
-
-  // 2️⃣ Form Filling – payment pending (pending + unpaid)
-  const pendingFormPayment = formFillingTasks.filter(
-    (t) => t.paymentStatus === "pending" || t.paymentStatus === "unpaid"
-  );
-
-  // 3️⃣ Xerox / Other – payment pending (pending + unpaid)
-  const pendingXeroxPayment = xeroxTasks.filter(
-    (t) => t.paymentStatus === "pending" || t.paymentStatus === "unpaid"
-  );
-
-  // ✅ FINAL COUNT
-  const totalPendingTasks =
-    pendingFormWork.length +
-    pendingFormPayment.length +
-    pendingXeroxPayment.length;
-
-  // Service distribution data
-  const jobSeekerCount = todayFormFilling.filter(
-    (t) => t.serviceType === "job_seeker"
-  ).length;
-
-  const studentCount = todayFormFilling.filter(
-    (t) => t.serviceType === "student"
-  ).length;
-
-  const govSchemeCount = todayFormFilling.filter(
-    (t) => t.serviceType === "gov_scheme"
-  ).length;
-
-  const xeroxCount = todayXerox.length;
+  const todayRevenue = stats?.todayRevenue ?? 0;
+  const totalPendingTasks = stats?.pendingCount ?? 0;
+  const totalCustomers = stats?.totalCustomers ?? 0;
+  const jobSeekerCount = stats?.serviceBreakdown?.job_seeker ?? 0;
+  const studentCount = stats?.serviceBreakdown?.student ?? 0;
+  const govSchemeCount = stats?.serviceBreakdown?.gov_scheme ?? 0;
+  const xeroxCount = stats?.serviceBreakdown?.xerox ?? 0;
+  const todayFormFillingCount = stats?.todayFormFilling ?? 0;
+  const todayXeroxCount = stats?.todayXerox ?? 0;
 
   const serviceDistribution = [
     { name: "Job Seeker", value: jobSeekerCount, color: "hsl(var(--chart-1))" },
@@ -93,52 +58,20 @@ const AdminDashboard: React.FC = () => {
     { name: "Offline Work", value: xeroxCount, color: "hsl(var(--chart-4))" },
   ];
 
-  // Revenue by service type (using revenue field)
-  const jobSeekerRevenue = todayFormFilling
-    .filter((t) => t.serviceType === "job_seeker")
-    .reduce((sum, t) => sum + (t.revenue || t.amount), 0);
-
-  const studentRevenue = todayFormFilling
-    .filter((t) => t.serviceType === "student")
-    .reduce((sum, t) => sum + (t.revenue || t.amount), 0);
-
-  const govSchemeRevenue = todayFormFilling
-    .filter((t) => t.serviceType === "gov_scheme")
-    .reduce((sum, t) => sum + (t.revenue || t.amount), 0);
-
-  const xeroxRevenue = todayXerox.reduce(
-    (sum, t) => sum + (t.revenue || t.amount),
-    0
-  );
-
   const revenueByService = [
-    {
-      name: "Job Seeker",
-      revenue: jobSeekerRevenue,
-      fill: "hsl(var(--chart-1))",
-    },
-    { name: "Student", revenue: studentRevenue, fill: "hsl(var(--chart-2))" },
-    {
-      name: "Gov Scheme",
-      revenue: govSchemeRevenue,
-      fill: "hsl(var(--chart-3))",
-    },
-    { name: "Offline Work", revenue: xeroxRevenue, fill: "hsl(var(--chart-4))" },
+    { name: "Job Seeker", revenue: stats?.revenueByService?.job_seeker ?? 0, fill: "hsl(var(--chart-1))" },
+    { name: "Student", revenue: stats?.revenueByService?.student ?? 0, fill: "hsl(var(--chart-2))" },
+    { name: "Gov Scheme", revenue: stats?.revenueByService?.gov_scheme ?? 0, fill: "hsl(var(--chart-3))" },
+    { name: "Offline Work", revenue: stats?.revenueByService?.xerox ?? 0, fill: "hsl(var(--chart-4))" },
   ];
 
-  // Employee performance (by revenue)
   const employeePerformance = employees.map((emp) => {
-    const empFormFilling = todayFormFilling
-      .filter((t) => t.employeeId === emp.id)
-      .reduce((sum, t) => sum + (t.revenue || t.amount), 0);
-
-    const empXerox = todayXerox
-      .filter((t) => t.employeeId === emp.id)
-      .reduce((sum, t) => sum + (t.revenue || t.amount), 0);
-
+    const empStats = stats?.employeeStats?.find(
+      (e: any) => String(e.employeeId) === String(emp.id)
+    );
     return {
       name: emp.name,
-      revenue: empFormFilling + empXerox,
+      revenue: empStats?.revenue ?? 0,
     };
   });
 
@@ -168,7 +101,7 @@ const AdminDashboard: React.FC = () => {
         />
         <StatCard
           title="Today's Tasks"
-          value={todayFormFilling.length + todayXerox.length}
+          value={todayFormFillingCount + todayXeroxCount}
           icon={FileText}
           iconClassName="bg-accent"
         />
@@ -180,7 +113,7 @@ const AdminDashboard: React.FC = () => {
         />
         <StatCard
           title="Total Customers"
-          value={customers.length}
+          value={totalCustomers}
           icon={TrendingUp}
           iconClassName="bg-info"
         />

@@ -111,6 +111,8 @@ interface DataContextType {
   updateEmployee: (id: string, updates: Partial<Employee>) => Promise<void>;
 
   refreshAll: () => Promise<void>;
+  fetchTasksFromDB: (page?: number, limit?: number) => Promise<void>;
+  totalTasks: number;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -122,17 +124,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [totalTasks, setTotalTasks] = useState(0);
   const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>(
     [],
   );
   const [xeroxTasks, setXeroxTasks] = useState<XeroxTask[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employeesLoaded, setEmployeesLoaded] = useState(false);
+  const [customersLoaded, setCustomersLoaded] = useState(false);
 
   /* =========================
      EMPLOYEES
   ========================= */
   const fetchEmployees = async () => {
+    if (employeesLoaded) return;
+
     const res = await api.get("/users");
+
     setEmployees(
       res.data
         .filter((u: any) => u.role === "employee")
@@ -144,14 +152,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           address: e.address,
           password: "",
           createdAt: e.created_at,
-        })),
+        }))
     );
+
+    setEmployeesLoaded(true);
   };
 
   const refreshAll = async () => {
     await Promise.all([
       fetchEmployees(),
-      fetchTasksFromDB(),
       fetchCustomersFromDB(),
     ]);
   };
@@ -162,24 +171,34 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
   const addEmployee = async (employee: Omit<Employee, "id" | "createdAt">) => {
     await api.post("/users", employee);
-    await fetchEmployees();
+    setEmployees((prev) => [
+      ...prev,
+      { ...employee, id: Date.now().toString(), createdAt: new Date().toISOString() }
+    ]);
   };
 
   const updateEmployee = async (id: string, updates: Partial<Employee>) => {
     await api.put(`/users/${id}`, updates);
-    await fetchEmployees();
+    setEmployees((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...updates } : e))
+    );
   };
 
   /* =========================
      FETCH TASKS FROM DB
   ========================= */
-  const fetchTasksFromDB = async () => {
-    const res = await api.get("/tasks");
+  const fetchTasksFromDB = async (page = 1, limit = 10) => {
+    const offset = (page - 1) * limit;
+
+    const res = await api.get(`/tasks?limit=${limit}&offset=${offset}`);
+
+    const { tasks: rawTasks, total } = res.data;
+    setTotalTasks(total);
 
     const ff: FormFillingTask[] = [];
     const xx: XeroxTask[] = [];
 
-    res.data.forEach((t: any) => {
+    rawTasks.forEach((t: any) => {
       if (t.service_type === "form_filling") {
         ff.push({
           id: String(t.id),
@@ -242,7 +261,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
      FETCH CUSTOMERS FROM DB
   ========================= */
   const fetchCustomersFromDB = async () => {
+    if (customersLoaded) return;
+
     const res = await api.get("/customers");
+
     const list: Customer[] = res.data.map((c: any) => ({
       id: String(c.id),
       name: c.name,
@@ -251,7 +273,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       type: c.type,
       createdAt: c.created_at,
     }));
+
     setCustomers(list);
+    setCustomersLoaded(true);
   };
 
   /* =========================
@@ -259,7 +283,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   ========================= */
   const addCustomer = async (customer: Omit<Customer, "id" | "createdAt">) => {
     const res = await api.post("/customers", customer);
-    await refreshAll();
 
     const newCustomer: Customer = {
       id: String(res.data.id),
@@ -278,7 +301,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
      CREATE TASK
   ========================= */
   const addFormFillingTask = async (task: any) => {
-    await api.post("/tasks", {
+    const res = await api.post("/tasks", {
       customer_id: task.customerId,
       employee_id: task.employeeId,
       service_type: "form_filling",
@@ -292,12 +315,38 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       revenue: task.revenue,
       payment_mode: task.paymentMode,
     });
-    await fetchTasksFromDB();
-    await refreshAll();
+
+    const t = res.data;
+
+    const newTask: FormFillingTask = {
+      id: String(t.id),
+      customerId: String(t.customer_id),
+      customerName: task.customerName || "—",
+      customerEmail: task.customerEmail || "—",
+      customerPhone: task.customerPhone || "—",
+      customerType: t.form_service_type,
+      serviceType: t.form_service_type,
+      applicationId: t.application_id || "",
+      password: t.application_password || "",
+      boardName: t.board_name || "",
+      amount: Number(t.total_amount || 0),
+      deductionAmount: Number(t.deduction_amount || 0),
+      revenue: Number(t.revenue || 0),
+      workStatus: t.work_status,
+      paymentStatus: t.payment_status === "unpaid" ? "pending" : t.payment_status,
+      paymentMode: t.payment_mode || "",
+      description: t.description || "",
+      employeeId: String(t.employee_id),
+      employeeName:
+        employees.find((e) => e.id === String(t.employee_id))?.name || "—",
+      createdAt: t.created_at,
+    };
+
+    setFormFillingTasks((prev) => [newTask, ...prev]);
   };
 
   const addXeroxTask = async (task: any) => {
-    await api.post("/tasks", {
+    const res = await api.post("/tasks", {
       customer_id: task.customerId,
       employee_id: task.employeeId,
       service_type: "xerox",
@@ -307,7 +356,28 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       revenue: task.revenue,
       payment_mode: task.paymentMode,
     });
-    await fetchTasksFromDB();
+
+    const t = res.data;
+
+    const newTask: XeroxTask = {
+      id: String(t.id),
+      customerId: String(t.customer_id),
+      customerName: task.customerName || "—",
+      customerEmail: task.customerEmail || "—",
+      customerPhone: task.customerPhone || "—",
+      amount: Number(t.total_amount || 0),
+      deductionAmount: Number(t.deduction_amount || 0),
+      revenue: Number(t.revenue || 0),
+      paymentStatus: t.payment_status === "unpaid" ? "pending" : t.payment_status,
+      paymentMode: t.payment_mode || "",
+      description: t.description || "",
+      employeeId: String(t.employee_id),
+      employeeName:
+        employees.find((e) => e.id === String(t.employee_id))?.name || "—",
+      createdAt: t.created_at,
+    };
+
+    setXeroxTasks((prev) => [newTask, ...prev]);
   };
 
   /* =========================
@@ -333,8 +403,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         payment_status: updates.paymentStatus,
         description: updates.description,
       });
-      await fetchTasksFromDB();
-      await refreshAll();
+      setFormFillingTasks((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? {
+                ...t,
+                ...updates,
+                revenue:
+                  (updates.amount ?? t.amount) -
+                  (updates.deductionAmount ?? (t.deductionAmount || 0)),
+              }
+            : t
+        )
+      );
     } catch (error) {
       console.error("Update form filling task failed", error);
       throw error;
@@ -355,7 +436,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         payment_status: updates.paymentStatus,
         description: updates.description,
       });
-      await fetchTasksFromDB();
+      setXeroxTasks((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? {
+                ...t,
+                ...updates,
+                revenue:
+                  (updates.amount ?? t.amount) -
+                  (updates.deductionAmount ?? (t.deductionAmount || 0)),
+              }
+            : t
+        )
+      );
     } catch (error) {
       console.error("Update xerox task failed", error);
       throw error;
@@ -365,8 +458,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   const deleteXeroxTask = async (id: string) => {
     try {
       await api.delete(`/tasks/${id}`);
-      await fetchTasksFromDB();
-      await refreshAll();
+      setXeroxTasks((prev) => prev.filter((t) => t.id !== id));
     } catch (error) {
       console.error("Delete task failed", error);
       throw error;
@@ -438,6 +530,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         getEmployeePendingCount,
         getTodayStats,
         refreshAll,
+        fetchTasksFromDB,
+        totalTasks,
       }}
     >
       {children}

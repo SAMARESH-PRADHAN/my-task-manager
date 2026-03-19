@@ -54,12 +54,86 @@ type StatusFilter = "all" | "pending" | "completed";
 
 const AllTasksEmployee: React.FC = () => {
   const {
-    formFillingTasks,
-    xeroxTasks,
     updateTask,
     updateXeroxTask,
     deleteXeroxTask,
   } = useData();
+
+  const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>([]);
+  const [xeroxTasks, setXeroxTasks] = useState<XeroxTask[]>([]);
+  const [totalTasks, setTotalTasks] = useState(0);
+  const [loadingTasks, setLoadingTasks] = useState(true);
+
+  const fetchMyTasks = async (page = 1) => {
+    try {
+      setLoadingTasks(true);
+      const res = await api.get(`/tasks?limit=${ITEMS_PER_PAGE}&offset=${(page - 1) * ITEMS_PER_PAGE}`);
+        const ff: FormFillingTask[] = [];
+        const xx: XeroxTask[] = [];
+        const { tasks: rawTasks, total } = res.data;
+        setTotalTasks(total);
+        rawTasks.forEach((t: any) => {
+          if (t.service_type === "form_filling") {
+            ff.push({
+              id: String(t.id),
+              customerId: String(t.customer_id),
+              customerName: t.customer_name ?? "—",
+              customerEmail: t.customer_email ?? "—",
+              customerPhone: t.customer_phone ?? "—",
+              customerType: t.form_service_type ?? "unknown",
+              serviceType: t.form_service_type ?? "unknown",
+              applicationId: t.application_id || "",
+              password: t.application_password || "",
+              boardName: t.board_name || "",
+              amount: Number(t.total_amount ?? 0),
+              deductionAmount: Number(t.deduction_amount ?? 0),
+              revenue: Number(t.revenue ?? 0),
+              workStatus: t.work_status ?? "pending",
+              paymentStatus: t.payment_status === "unpaid" ? "pending" : (t.payment_status ?? "pending"),
+              paymentMode: t.payment_mode ?? "",
+              description: t.description ?? "",
+              employeeId: t.employee_id ? String(t.employee_id) : "",
+              employeeName: t.employee_name ?? "—",
+              completedById: t.completed_by ? String(t.completed_by) : undefined,
+              completedByName: t.completed_by_name ?? undefined,
+              screenshotUrl: t.screenshot_url,
+              createdAt: t.created_at,
+            });
+          } else if (t.service_type === "xerox") {
+            xx.push({
+              id: String(t.id),
+              customerId: String(t.customer_id),
+              customerName: t.customer_name ?? "—",
+              customerEmail: t.customer_email ?? "—",
+              customerPhone: t.customer_phone ?? "—",
+              amount: Number(t.total_amount ?? 0),
+              deductionAmount: Number(t.deduction_amount ?? 0),
+              revenue: Number(t.revenue ?? 0),
+              paymentStatus: t.payment_status === "unpaid" ? "pending" : (t.payment_status ?? "pending"),
+              paymentMode: t.payment_mode ?? "",
+              description: t.description ?? "",
+              employeeId: t.employee_id ? String(t.employee_id) : "",
+              employeeName: t.employee_name ?? "—",
+              completedById: t.completed_by ? String(t.completed_by) : undefined,
+              completedByName: t.completed_by_name ?? undefined,
+              createdAt: t.created_at,
+            });
+          }
+        });
+        setFormFillingTasks(ff);
+        setXeroxTasks(xx);
+      } catch (err) {
+        console.error("Failed to fetch tasks", err);
+      } finally {
+        setLoadingTasks(false);
+      }
+  };
+
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    fetchMyTasks(currentPage);
+  }, [currentPage]);
 
   const [activeTab, setActiveTab] = useState<TaskTab>("form_filling");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -68,7 +142,6 @@ const AllTasksEmployee: React.FC = () => {
   const [boards, setBoards] = useState<string[]>([]);
   const [fromDate, setFromDate] = useState<Date | undefined>();
   const [toDate, setToDate] = useState<Date | undefined>();
-  const [currentPage, setCurrentPage] = useState(1);
 
   const [isUpdatingFormTask, setIsUpdatingFormTask] = useState(false);
   const [isUpdatingXeroxTask, setIsUpdatingXeroxTask] = useState(false);
@@ -178,7 +251,7 @@ const AllTasksEmployee: React.FC = () => {
     activeTab === "form_filling"
       ? filteredFormFillingTasks
       : filteredXeroxTasks;
-  const totalPages = Math.ceil(currentTasks.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(totalTasks / ITEMS_PER_PAGE);
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, statusFilter, searchQuery, fromDate, toDate]);
@@ -188,10 +261,7 @@ const AllTasksEmployee: React.FC = () => {
       setCurrentPage(totalPages || 1);
     }
   }, [totalPages]);
-  const paginatedTasks = currentTasks.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
-  );
+  const paginatedTasks = currentTasks;
 
   const handleDownload = () => {
     if (activeTab === "form_filling") {
@@ -293,6 +363,7 @@ const AllTasksEmployee: React.FC = () => {
 
     try {
       await deleteXeroxTask(deletingTaskId);
+      setXeroxTasks((prev) => prev.filter((t) => t.id !== deletingTaskId));
       toast.success("Task deleted successfully!");
     } catch {
       toast.error("Failed to delete task");
