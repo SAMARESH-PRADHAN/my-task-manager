@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import { sql } from "../config/db.js";
 
 // Routes
@@ -19,6 +20,7 @@ const app = express();
     MIDDLEWARE
   ====================== */
 app.use(cors());
+app.use(compression());
 app.use(express.json());
 
 // ⚠️ NOTE:

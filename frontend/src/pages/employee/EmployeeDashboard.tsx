@@ -1,44 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Copy, IndianRupee, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
+import { api } from '@/lib/api';
 import StatCard from '@/components/layout/shared/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
 
 const EmployeeDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { formFillingTasks, xeroxTasks, getEmployeeTasks, getTodayStats, getEmployeePendingCount  } = useData();
 
-  const employeeTasks = user ? getEmployeeTasks(String(user.id)) : { formFilling: [], xerox: [] };
-  // const todayStats = getTodayStats();
+  const [stats, setStats] = useState<any>(null);
+  const [recentTasks, setRecentTasks] = useState<{ formFilling: any[], xerox: any[] }>({ formFilling: [], xerox: [] });
 
-  // Today's tasks for this employee
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  useEffect(() => {
+    if (!user) return;
+    // Fetch dashboard stats
+    api.get("/tasks/stats/dashboard").then((res) => setStats(res.data));
+    // Fetch today's recent tasks for display
+    api.get("/tasks/my").then((res) => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const ff = res.data.filter((t: any) => t.service_type === 'form_filling' && new Date(t.created_at) >= today);
+      const xx = res.data.filter((t: any) => t.service_type === 'xerox' && new Date(t.created_at) >= today);
+      setRecentTasks({ formFilling: ff, xerox: xx });
+    });
+  }, [user]);
 
-  const todayFormFilling = employeeTasks.formFilling.filter(
-    (t) => new Date(t.createdAt) >= today
-  );
-  const todayXerox = employeeTasks.xerox.filter((t) => new Date(t.createdAt) >= today);
-// !changes here
- const todayRevenue =
-  todayFormFilling.reduce((sum, t) => sum + t.revenue, 0) +
-  todayXerox.reduce((sum, t) => sum + t.revenue, 0);
-
-// !to here
-
-  const completedTasks =
-  todayFormFilling.filter(t => t.workStatus === 'completed').length +
-  todayXerox.filter(t => t.paymentStatus === 'completed').length;
-
-
-// !2nd change here 
-  const pendingTasks = user
-  ? getEmployeePendingCount(String(user.id))
-  : 0;
-
-// !here
+  const todayRevenue = stats?.todayRevenue ?? 0;
+  const pendingTasks = stats?.pendingCount ?? 0;
+  const todayFormFillingCount = stats?.todayFormFilling ?? 0;
+  const todayXeroxCount = stats?.todayXerox ?? 0;
   return (
     <div className="space-y-6 pb-20 lg:pb-6">
       <div className="flex items-center justify-between">
@@ -59,13 +51,13 @@ const EmployeeDashboard: React.FC = () => {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Today's Online work"
-          value={todayFormFilling.length}
+          value={todayFormFillingCount}
           icon={FileText}
           iconClassName="bg-primary"
         />
         <StatCard
           title="Today's Offline Work"
-          value={todayXerox.length}
+          value={todayXeroxCount}
           icon={Copy}
           iconClassName="bg-accent"
         />
@@ -89,31 +81,31 @@ const EmployeeDashboard: React.FC = () => {
             <CardTitle className="text-lg">Recent Online Tasks</CardTitle>
           </CardHeader>
           <CardContent>
-            {todayFormFilling.length === 0 ? (
+            {recentTasks.formFilling.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
                 No Online tasks for today
               </p>
             ) : (
               <div className="space-y-4">
-                {todayFormFilling.slice(0, 5).map((task) => (
+                {recentTasks.formFilling.slice(0, 5).map((task: any) => (
                   <div
                     key={task.id}
                     className="flex items-center justify-between p-4 rounded-lg bg-muted/50"
                   >
                     <div>
-                      <p className="font-semibold text-foreground">{task.customerName}</p>
-                      <p className="text-sm text-muted-foreground">{task.serviceType.replace('_', ' ')}</p>
+                      <p className="font-semibold text-foreground">{task.customer_name}</p>
+                      <p className="text-sm text-muted-foreground">{(task.form_service_type || '').replace('_', ' ')}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-foreground">₹{task.amount}</p>
+                      <p className="font-semibold text-foreground">₹{task.total_amount ?? task.revenue ?? 0}</p>
                       <span
                         className={`text-xs px-2 py-1 rounded-full ${
-                          task.workStatus === 'completed'
+                          (task.work_status || task.workStatus) === 'completed'
                             ? 'bg-success/20 text-success'
                             : 'bg-warning/20 text-warning'
                         }`}
                       >
-                        {task.workStatus}
+                        {task.work_status || task.workStatus || 'pending'}
                       </span>
                     </div>
                   </div>
@@ -128,31 +120,31 @@ const EmployeeDashboard: React.FC = () => {
             <CardTitle className="text-lg">Recent Offline Tasks</CardTitle>
           </CardHeader>
           <CardContent>
-            {todayXerox.length === 0 ? (
+            {recentTasks.xerox.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
                 No Offline tasks for today
               </p>
             ) : (
               <div className="space-y-4">
-                {todayXerox.slice(0, 5).map((task) => (
+                {recentTasks.xerox.slice(0, 5).map((task: any) => (
                   <div
                     key={task.id}
                     className="flex items-center justify-between p-4 rounded-lg bg-muted/50"
                   >
                     <div>
-                      <p className="font-semibold text-foreground">{task.customerName}</p>
+                      <p className="font-semibold text-foreground">{task.customer_name}</p>
                       <p className="text-sm text-muted-foreground">{task.description}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-foreground">₹{task.amount}</p>
+                      <p className="font-semibold text-foreground">₹{task.total_amount ?? task.revenue ?? 0}</p>
                       <span
                         className={`text-xs px-2 py-1 rounded-full ${
-                          task.paymentStatus === 'completed'
+                          (task.payment_status || task.paymentStatus) === 'completed'
                             ? 'bg-success/20 text-success'
                             : 'bg-warning/20 text-warning'
                         }`}
                       >
-                        {task.paymentStatus}
+                        {task.payment_status || task.paymentStatus || 'pending'}
                       </span>
                     </div>
                   </div>

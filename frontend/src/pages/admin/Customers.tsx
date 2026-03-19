@@ -32,7 +32,7 @@ const ITEMS_PER_PAGE = 10;
 type CustomerTab = "all" | "job_seeker" | "student" | "gov_scheme";
 
 const Customers: React.FC = () => {
-  const { customers, formFillingTasks } = useData();
+  const { customers } = useData();
 
   const [activeTab, setActiveTab] = useState<CustomerTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,25 +44,7 @@ const Customers: React.FC = () => {
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
   const [notifyMessage, setNotifyMessage] = useState("");
 
-  // Get unique customers from form filling tasks
-  const uniqueCustomers = useMemo(() => {
-    const customerMap = new Map();
-
-    formFillingTasks.forEach((task) => {
-      if (!customerMap.has(task.customerId)) {
-        customerMap.set(task.customerId, {
-          id: task.customerId,
-          name: task.customerName,
-          email: task.customerEmail,
-          phone: task.customerPhone,
-          type: task.customerType,
-          createdAt: task.createdAt,
-        });
-      }
-    });
-
-    return Array.from(customerMap.values());
-  }, [formFillingTasks, customers]);
+  const uniqueCustomers = customers;
 
   const filteredCustomers = useMemo(() => {
     return uniqueCustomers.filter((customer) => {

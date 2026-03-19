@@ -10,8 +10,13 @@ const upload = multer({ dest: "uploads/" });
 /**
  * GET ALL TASKS
  */
-router.get("/", auth, async (_, res) => {
+router.get("/", auth, async (req, res) => {
   try {
+    const limit = Number(req.query.limit) || 10;
+    const offset = Number(req.query.offset) || 0;
+
+    const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM tasks`;
+
     const tasks = await sql`
       SELECT
         t.*,
@@ -19,18 +24,17 @@ router.get("/", auth, async (_, res) => {
         c.phone AS customer_phone,
         c.email AS customer_email,
         c.type  AS customer_type,
-
         e.name  AS employee_name,
         cb.name AS completed_by_name
-
       FROM tasks t
       LEFT JOIN customers c  ON c.id  = t.customer_id
       LEFT JOIN users     e  ON e.id  = t.employee_id
       LEFT JOIN users     cb ON cb.id = t.completed_by
       ORDER BY t.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
     `;
 
-    res.json(tasks);
+    res.json({ tasks, total: count });
   } catch (err) {
     console.error("FETCH TASKS ERROR:", err);
     res.status(500).json({ message: "Server error" });
@@ -120,6 +124,314 @@ router.get("/my", auth, async (req, res) => {
     res.json(tasks);
   } catch (err) {
     console.error("FETCH MY TASKS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/**
+ * DASHBOARD STATS
+ */
+router.get("/stats/dashboard", auth, async (req, res) => {
+  try {
+    const isAdmin = req.user.role === "admin";
+    const employeeId = req.user.id;
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    // Admin sees all tasks, employee sees only their own
+    const tasks = isAdmin
+      ? await sql`
+          SELECT service_type, form_service_type, work_status, payment_status, revenue, total_amount, employee_id
+          FROM tasks
+          WHERE created_at >= ${todayStart}
+        `
+      : await sql`
+          SELECT service_type, form_service_type, work_status, payment_status, revenue, total_amount, employee_id
+          FROM tasks
+          WHERE created_at >= ${todayStart}
+          AND employee_id = ${employeeId}
+        `;
+
+    // Pending counts (all tasks not just today)
+    // Count pending separately (work pending + payment pending = 2 actions on same task)
+    const pendingQuery = isAdmin
+      ? await sql`
+          SELECT work_status, payment_status, service_type
+          FROM tasks
+        `
+      : await sql`
+          SELECT work_status, payment_status, service_type
+          FROM tasks
+          WHERE employee_id = ${employeeId}
+        `;
+
+    let pendingCount = 0;
+    pendingQuery.forEach(t => {
+      if (t.service_type === 'form_filling') {
+        if (t.work_status === 'pending') pendingCount++;
+        if (t.payment_status === 'pending' || t.payment_status === 'unpaid') pendingCount++;
+      } else if (t.service_type === 'xerox') {
+        if (t.payment_status === 'pending' || t.payment_status === 'unpaid') pendingCount++;
+      }
+    });
+
+    const formFilling = tasks.filter(t => t.service_type === 'form_filling');
+    const xerox = tasks.filter(t => t.service_type === 'xerox');
+
+    const todayRevenue =
+      tasks.reduce((sum, t) => sum + Number(t.revenue || t.total_amount || 0), 0);
+
+    // Total customers count
+    const [{ count: totalCustomers }] = await sql`SELECT COUNT(*)::int AS count FROM customers`;
+
+    // Today's customers
+    const [{ count: todayCustomers }] = await sql`
+      SELECT COUNT(*)::int AS count FROM customers
+      WHERE created_at >= ${todayStart}
+    `;
+
+    // Lifetime stats
+    const lifetimeStats = await sql`
+      SELECT
+        COUNT(*)::int AS total_tasks,
+        COALESCE(SUM(revenue), 0)::float AS total_revenue
+      FROM tasks
+    `;
+
+    const totalTasks = lifetimeStats[0].total_tasks;
+    const totalRevenue = lifetimeStats[0].total_revenue;
+
+    // Revenue by service type
+    const revenueByService = {
+      job_seeker: formFilling.filter(t => t.form_service_type === 'job_seeker').reduce((s, t) => s + Number(t.revenue || t.total_amount || 0), 0),
+      student: formFilling.filter(t => t.form_service_type === 'student').reduce((s, t) => s + Number(t.revenue || t.total_amount || 0), 0),
+      gov_scheme: formFilling.filter(t => t.form_service_type === 'gov_scheme').reduce((s, t) => s + Number(t.revenue || t.total_amount || 0), 0),
+      xerox: xerox.reduce((s, t) => s + Number(t.revenue || t.total_amount || 0), 0),
+    };
+
+    res.json({
+      todayFormFilling: formFilling.length,
+      todayXerox: xerox.length,
+      todayRevenue,
+      pendingCount,
+      totalCustomers,
+      todayCustomers,
+      totalTasks,
+      totalRevenue,
+      serviceBreakdown: {
+        job_seeker: formFilling.filter(t => t.form_service_type === 'job_seeker').length,
+        student: formFilling.filter(t => t.form_service_type === 'student').length,
+        gov_scheme: formFilling.filter(t => t.form_service_type === 'gov_scheme').length,
+        xerox: xerox.length,
+      },
+      revenueByService,
+      employeeStats: isAdmin
+        ? Object.values(
+            tasks.reduce((acc, t) => {
+              const id = String(t.employee_id);
+              if (!acc[id]) acc[id] = { employeeId: id, revenue: 0 };
+              acc[id].revenue += Number(t.revenue || t.total_amount || 0);
+              return acc;
+            }, {})
+          )
+        : [],
+    });
+  } catch (err) {
+    console.error("DASHBOARD STATS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/**
+ * EMPLOYEE STATS
+ */
+router.get("/stats/employees", auth, async (req, res) => {
+  try {
+    const tasks = await sql`
+      SELECT
+        employee_id,
+        service_type,
+        form_service_type,
+        work_status,
+        payment_status,
+        revenue,
+        total_amount,
+        deduction_amount,
+        created_at
+      FROM tasks
+    `;
+
+    // Group by employee
+    const statsMap = {};
+    tasks.forEach(t => {
+      const id = String(t.employee_id);
+      if (!statsMap[id]) {
+        statsMap[id] = { employeeId: id, tasks: [] };
+      }
+      statsMap[id].tasks.push(t);
+    });
+
+    res.json(statsMap);
+  } catch (err) {
+    console.error("EMPLOYEE STATS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/**
+ * ANALYTICS STATS
+ */
+router.get("/stats/analytics", auth, async (req, res) => {
+  try {
+    const { range = "daily" } = req.query;
+
+    const now = new Date();
+
+    // Current period start (for summary cards, pie chart, bar chart)
+    let periodStart;
+    if (range === "daily") {
+      periodStart = new Date(now);
+      periodStart.setHours(0, 0, 0, 0);
+    } else if (range === "weekly") {
+      periodStart = new Date(now);
+      periodStart.setDate(now.getDate() - now.getDay()); // start of this week
+      periodStart.setHours(0, 0, 0, 0);
+    } else {
+      periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      periodStart.setHours(0, 0, 0, 0);
+    }
+
+    // Trend period start (for trend chart - last 7 days / 4 weeks / 6 months)
+    let rangeStart;
+    if (range === "daily") {
+      rangeStart = new Date(now);
+      rangeStart.setDate(rangeStart.getDate() - 6);
+      rangeStart.setHours(0, 0, 0, 0);
+    } else if (range === "weekly") {
+      rangeStart = new Date(now);
+      rangeStart.setDate(rangeStart.getDate() - 27);
+      rangeStart.setHours(0, 0, 0, 0);
+    } else {
+      rangeStart = new Date(now);
+      rangeStart.setMonth(rangeStart.getMonth() - 5);
+      rangeStart.setDate(1);
+      rangeStart.setHours(0, 0, 0, 0);
+    }
+
+    // All tasks for trend (wider range)
+    const trendTasks = await sql`
+      SELECT service_type, form_service_type, revenue, total_amount,
+             deduction_amount, employee_id, created_at
+      FROM tasks
+      WHERE created_at >= ${rangeStart}
+      ORDER BY created_at ASC
+    `;
+
+    // Current period tasks only (for summary, pie, bar charts)
+    const periodTasks = await sql`
+      SELECT service_type, form_service_type, revenue, total_amount,
+             deduction_amount, employee_id, created_at
+      FROM tasks
+      WHERE created_at >= ${periodStart}
+    `;
+
+    const getRevenue = (t) => Number(t.revenue || t.total_amount || 0);
+
+    const formFilling = periodTasks.filter(t => t.service_type === 'form_filling');
+    const xerox = periodTasks.filter(t => t.service_type === 'xerox');
+
+    // Service distribution (current period)
+    const serviceDistribution = {
+      job_seeker: formFilling.filter(t => t.form_service_type === 'job_seeker').length,
+      student: formFilling.filter(t => t.form_service_type === 'student').length,
+      gov_scheme: formFilling.filter(t => t.form_service_type === 'gov_scheme').length,
+      xerox: xerox.length,
+    };
+
+    // Revenue by service (current period)
+    const revenueByService = {
+      job_seeker: formFilling.filter(t => t.form_service_type === 'job_seeker').reduce((s, t) => s + getRevenue(t), 0),
+      student: formFilling.filter(t => t.form_service_type === 'student').reduce((s, t) => s + getRevenue(t), 0),
+      gov_scheme: formFilling.filter(t => t.form_service_type === 'gov_scheme').reduce((s, t) => s + getRevenue(t), 0),
+      xerox: xerox.reduce((s, t) => s + getRevenue(t), 0),
+    };
+
+    // Employee performance (current period) with formFilling + xerox split
+    const empMap = {};
+    periodTasks.forEach(t => {
+      const id = String(t.employee_id);
+      if (!empMap[id]) empMap[id] = { employeeId: id, formFilling: 0, xerox: 0 };
+      if (t.service_type === 'form_filling') empMap[id].formFilling += getRevenue(t);
+      else if (t.service_type === 'xerox') empMap[id].xerox += getRevenue(t);
+    });
+    const employeePerformance = Object.values(empMap).map((e) => ({
+      ...e,
+      revenue: e.formFilling + e.xerox,
+    }));
+
+    // Build all expected keys for the range
+    const trendMap = {};
+
+    if (range === 'daily') {
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().split('T')[0];
+        trendMap[key] = { formFilling: 0, xerox: 0 };
+      }
+    } else if (range === 'weekly') {
+      for (let i = 3; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - (i * 7));
+        // Start of that week (Sunday)
+        d.setDate(d.getDate() - d.getDay());
+        const key = d.toISOString().split('T')[0];
+        trendMap[key] = { formFilling: 0, xerox: 0 };
+      }
+    } else {
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now);
+        d.setMonth(d.getMonth() - i);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        trendMap[key] = { formFilling: 0, xerox: 0 };
+      }
+    }
+
+    // Fill in actual data
+    trendTasks.forEach(t => {
+      let key;
+      const d = new Date(t.created_at);
+      if (range === 'daily') {
+        key = d.toISOString().split('T')[0];
+      } else if (range === 'weekly') {
+        const weekStart = new Date(d);
+        weekStart.setDate(d.getDate() - d.getDay());
+        key = weekStart.toISOString().split('T')[0];
+      } else {
+        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      }
+      if (trendMap[key]) {
+        if (t.service_type === 'form_filling') trendMap[key].formFilling += getRevenue(t);
+        else if (t.service_type === 'xerox') trendMap[key].xerox += getRevenue(t);
+      }
+    });
+
+    const totalRevenue = periodTasks.reduce((s, t) => s + getRevenue(t), 0);
+    const totalTasks = periodTasks.length;
+    const totalDeduction = periodTasks.reduce((s, t) => s + Number(t.deduction_amount || 0), 0);
+
+    res.json({
+      totalRevenue,
+      totalTasks,
+      totalDeduction,
+      serviceDistribution,
+      revenueByService,
+      employeePerformance,
+      trendData: trendMap,
+    });
+  } catch (err) {
+    console.error("ANALYTICS STATS ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -226,17 +538,17 @@ router.delete("/:id", auth, async (req, res) => {
   }
 
   try {
-    const taskResult = await sql`
-      SELECT customer_id FROM tasks WHERE id = ${taskId}
+    const deleted = await sql`
+      DELETE FROM tasks
+      WHERE id = ${taskId}
+      RETURNING customer_id
     `;
 
-    if (taskResult.length === 0) {
+    if (deleted.length === 0) {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    const customerId = taskResult[0].customer_id;
-
-    await sql`DELETE FROM tasks WHERE id = ${taskId}`;
+    const customerId = deleted[0].customer_id;
 
     if (customerId) {
       await sql`DELETE FROM customers WHERE id = ${customerId}`;

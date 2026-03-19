@@ -6,29 +6,30 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { DataProvider } from "@/contexts/DataContext";
+import { lazy, Suspense } from "react";
 
 // Layouts
 import EmployeeLayout from "@/components/layout/EmployeeLayout";
 import AdminLayout from "@/components/layout/AdminLayout";
 
-// Pages
+// Pages (eager - always needed)
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
-// Employee Pages
-import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
-import NewTask from "./pages/employee/NewTask";
-import MyTasks from "./pages/employee/MyTasks";
-import AllEmployeeTasks from "./pages/employee/AllTasksEmployee"
+// Employee Pages (lazy)
+const EmployeeDashboard = lazy(() => import("./pages/employee/EmployeeDashboard"));
+const NewTask = lazy(() => import("./pages/employee/NewTask"));
+const MyTasks = lazy(() => import("./pages/employee/MyTasks"));
+const AllEmployeeTasks = lazy(() => import("./pages/employee/AllTasksEmployee"));
 
-// Admin Pages
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AssignWork from "./pages/admin/AssignWork";
-import Employees from "./pages/admin/Employees";
-import Customers from "./pages/admin/Customers";
-import AllTasks from "./pages/admin/AllTasks";
-import Analytics from "./pages/admin/Analytics";
+// Admin Pages (lazy)
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AssignWork = lazy(() => import("./pages/admin/AssignWork"));
+const Employees = lazy(() => import("./pages/admin/Employees"));
+const Customers = lazy(() => import("./pages/admin/Customers"));
+const AllTasks = lazy(() => import("./pages/admin/AllTasks"));
+const Analytics = lazy(() => import("./pages/admin/Analytics"));
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
@@ -67,6 +69,7 @@ const App = () => (
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
+            </Suspense>
             </BrowserRouter>
           </TooltipProvider>
         </DataProvider>

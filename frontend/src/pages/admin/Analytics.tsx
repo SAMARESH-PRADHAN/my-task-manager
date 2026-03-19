@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useData } from "@/contexts/DataContext";
+import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +35,33 @@ import {
 type TimeRange = "daily" | "weekly" | "monthly";
 
 const Analytics: React.FC = () => {
-  const { formFillingTasks, xeroxTasks, employees } = useData();
+  const { employees } = useData();
+  const [formFillingTasks, setFormFillingTasks] = useState<any[]>([]);
+  const [xeroxTasks, setXeroxTasks] = useState<any[]>([]);
+
+  useEffect(() => {
+    api.get("/tasks/stats/employees").then((res) => {
+      const ff: any[] = [];
+      const xx: any[] = [];
+      Object.values(res.data).forEach((emp: any) => {
+        emp.tasks.forEach((t: any) => {
+          const base = {
+            employeeId: String(t.employee_id),
+            revenue: Number(t.revenue || t.total_amount || 0),
+            amount: Number(t.total_amount || 0),
+            createdAt: t.created_at,
+          };
+          if (t.service_type === 'form_filling') {
+            ff.push({ ...base, serviceType: t.form_service_type ?? t.service_type });
+          } else if (t.service_type === 'xerox') {
+            xx.push(base);
+          }
+        });
+      });
+      setFormFillingTasks(ff);
+      setXeroxTasks(xx);
+    });
+  }, []);
   const [timeRange, setTimeRange] = useState<TimeRange>("daily");
 
   // const getDateRange = () => {
