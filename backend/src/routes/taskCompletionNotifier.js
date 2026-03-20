@@ -10,6 +10,7 @@ export async function notifyTaskCompleted(taskId) {
         t.application_password,
         t.service_type,
         t.form_service_type,
+        t.description,
         c.name AS customer_name,
         c.phone AS customer_phone,
         u.name AS employee_name,
@@ -31,7 +32,7 @@ export async function notifyTaskCompleted(taskId) {
 Dear ${task.customer_name},
 Greetings and welocome to the Cyber City!
 
-We are happy to inform you that your ${task.board_name || "N/A"}
+We are happy to inform you that your ${task.board_name || "N/A"} Portal:- ${task.description}
 application registration is submited successfully.
 
 Application Details:
