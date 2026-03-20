@@ -56,13 +56,17 @@ app.use("/task-notifications", taskNotificationsRoutes);
 /* ======================
     HEALTH CHECK
   ====================== */
-app.get("/health", async (_, res) => {
-  try {
-    await sql`SELECT 1`;
-    res.json({ status: "Backend is running 🚀" });
-  } catch {
-    res.status(500).json({ status: "db_error" });
-  }
+// app.get("/health", async (_, res) => {
+//   try {
+//     await sql`SELECT 1`;
+//     res.json({ status: "Backend is running 🚀" });
+//   } catch {
+//     res.status(500).json({ status: "db_error" });
+//   }
+// });
+app.get("/health", (_, res) => {
+  res.json({ status: "Backend is running 🚀" });
 });
+ 
 
 export default app;
