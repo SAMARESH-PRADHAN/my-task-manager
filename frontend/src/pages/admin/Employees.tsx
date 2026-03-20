@@ -479,6 +479,7 @@ const Employees: React.FC = () => {
             Monthly Data:
           </span>
           <Select
+          value={selectedMonth !== null ? String(selectedMonth) : ""}
             onValueChange={(v) => {
               setSelectedMonth(Number(v));
               if (selectedYear !== null) {
@@ -634,7 +635,7 @@ const Employees: React.FC = () => {
                       ) : null}
                     </div>
                     <span className="text-lg font-bold text-foreground">
-                      ₹{stats.thisMonthRevenue}
+                      ₹{stats.thisMonthRevenue.toFixed(2)}
                     </span>
                     {diff !== 0 && (
                       <span
@@ -642,7 +643,7 @@ const Employees: React.FC = () => {
                           diff > 0 ? "text-success" : "text-destructive"
                         }`}
                       >
-                        {diff > 0 ? "+" : ""}₹{diff}
+                        {diff > 0 ? "+" : ""}₹{diff.toFixed(2)}
                       </span>
                     )}
                     <span className="text-xs text-muted-foreground">
@@ -656,7 +657,7 @@ const Employees: React.FC = () => {
                   <div className="flex flex-col items-center p-2 bg-muted/50 rounded-lg">
                     <IndianRupee className="h-4 w-4 text-muted-foreground mb-1" />
                     <span className="text-lg font-bold text-foreground">
-                      ₹{stats.lastMonthRevenue}
+                      ₹{stats.lastMonthRevenue.toFixed(2)}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {!isMonthFilterActive
