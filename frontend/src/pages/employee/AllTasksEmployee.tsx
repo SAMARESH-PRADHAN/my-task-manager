@@ -53,89 +53,102 @@ type TaskTab = "form_filling" | "xerox";
 type StatusFilter = "all" | "pending" | "completed";
 
 const AllTasksEmployee: React.FC = () => {
-  const {
-    updateTask,
-    updateXeroxTask,
-    deleteXeroxTask,
-  } = useData();
+  const { updateTask, updateXeroxTask, deleteXeroxTask } = useData();
 
-  const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>([]);
+  const [formFillingTasks, setFormFillingTasks] = useState<FormFillingTask[]>(
+    [],
+  );
   const [xeroxTasks, setXeroxTasks] = useState<XeroxTask[]>([]);
   const [totalTasks, setTotalTasks] = useState(0);
   const [loadingTasks, setLoadingTasks] = useState(true);
+  const [activeTab, setActiveTab] = useState<TaskTab>("form_filling");
+
 
   const fetchMyTasks = async (page = 1) => {
     try {
       setLoadingTasks(true);
-      const res = await api.get(`/tasks?limit=${ITEMS_PER_PAGE}&offset=${(page - 1) * ITEMS_PER_PAGE}`);
-        const ff: FormFillingTask[] = [];
-        const xx: XeroxTask[] = [];
-        const { tasks: rawTasks, total } = res.data;
-        setTotalTasks(total);
-        rawTasks.forEach((t: any) => {
-          if (t.service_type === "form_filling") {
-            ff.push({
-              id: String(t.id),
-              customerId: String(t.customer_id),
-              customerName: t.customer_name ?? "—",
-              customerEmail: t.customer_email ?? "—",
-              customerPhone: t.customer_phone ?? "—",
-              customerType: t.form_service_type ?? "unknown",
-              serviceType: t.form_service_type ?? "unknown",
-              applicationId: t.application_id || "",
-              password: t.application_password || "",
-              boardName: t.board_name || "",
-              amount: Number(t.total_amount ?? 0),
-              deductionAmount: Number(t.deduction_amount ?? 0),
-              revenue: Number(t.revenue ?? 0),
-              workStatus: t.work_status ?? "pending",
-              paymentStatus: t.payment_status === "unpaid" ? "pending" : (t.payment_status ?? "pending"),
-              paymentMode: t.payment_mode ?? "",
-              description: t.description ?? "",
-              employeeId: t.employee_id ? String(t.employee_id) : "",
-              employeeName: t.employee_name ?? "—",
-              completedById: t.completed_by ? String(t.completed_by) : undefined,
-              completedByName: t.completed_by_name ?? undefined,
-              screenshotUrl: t.screenshot_url,
-              createdAt: t.created_at,
-            });
-          } else if (t.service_type === "xerox") {
-            xx.push({
-              id: String(t.id),
-              customerId: String(t.customer_id),
-              customerName: t.customer_name ?? "—",
-              customerEmail: t.customer_email ?? "—",
-              customerPhone: t.customer_phone ?? "—",
-              amount: Number(t.total_amount ?? 0),
-              deductionAmount: Number(t.deduction_amount ?? 0),
-              revenue: Number(t.revenue ?? 0),
-              paymentStatus: t.payment_status === "unpaid" ? "pending" : (t.payment_status ?? "pending"),
-              paymentMode: t.payment_mode ?? "",
-              description: t.description ?? "",
-              employeeId: t.employee_id ? String(t.employee_id) : "",
-              employeeName: t.employee_name ?? "—",
-              completedById: t.completed_by ? String(t.completed_by) : undefined,
-              completedByName: t.completed_by_name ?? undefined,
-              createdAt: t.created_at,
-            });
-          }
-        });
-        setFormFillingTasks(ff);
-        setXeroxTasks(xx);
-      } catch (err) {
-        console.error("Failed to fetch tasks", err);
-      } finally {
-        setLoadingTasks(false);
-      }
+      const offset = (page - 1) * ITEMS_PER_PAGE;
+
+    const res = await api.get(
+      `/tasks?limit=${ITEMS_PER_PAGE}&offset=${offset}`
+    );
+
+    const { tasks: rawTasks, total } = res.data;
+
+    const ff: FormFillingTask[] = [];
+    const xx: XeroxTask[] = [];
+      rawTasks.forEach((t: any) => {
+        if (t.service_type === "form_filling") {
+          ff.push({
+            id: String(t.id),
+            customerId: String(t.customer_id),
+            customerName: t.customer_name ?? "—",
+            customerEmail: t.customer_email ?? "—",
+            customerPhone: t.customer_phone ?? "—",
+            customerType: t.form_service_type ?? "unknown",
+            serviceType: t.form_service_type ?? "unknown",
+            applicationId: t.application_id || "",
+            password: t.application_password || "",
+            boardName: t.board_name || "",
+            amount: Number(t.total_amount ?? 0),
+            deductionAmount: Number(t.deduction_amount ?? 0),
+            revenue: Number(t.revenue ?? 0),
+            workStatus: t.work_status ?? "pending",
+            paymentStatus:
+              t.payment_status === "unpaid"
+                ? "pending"
+                : (t.payment_status ?? "pending"),
+            paymentMode: t.payment_mode ?? "",
+            description: t.description ?? "",
+            employeeId: t.employee_id ? String(t.employee_id) : "",
+            employeeName: t.employee_name ?? "—",
+            completedById: t.completed_by ? String(t.completed_by) : undefined,
+            completedByName: t.completed_by_name ?? undefined,
+            screenshotUrl: t.screenshot_url,
+            createdAt: t.created_at,
+          });
+        } else if (t.service_type === "xerox") {
+          xx.push({
+            id: String(t.id),
+            customerId: String(t.customer_id),
+            customerName: t.customer_name ?? "—",
+            customerEmail: t.customer_email ?? "—",
+            customerPhone: t.customer_phone ?? "—",
+            amount: Number(t.total_amount ?? 0),
+            deductionAmount: Number(t.deduction_amount ?? 0),
+            revenue: Number(t.revenue ?? 0),
+            paymentStatus:
+              t.payment_status === "unpaid"
+                ? "pending"
+                : (t.payment_status ?? "pending"),
+            paymentMode: t.payment_mode ?? "",
+            description: t.description ?? "",
+            employeeId: t.employee_id ? String(t.employee_id) : "",
+            employeeName: t.employee_name ?? "—",
+            completedById: t.completed_by ? String(t.completed_by) : undefined,
+            completedByName: t.completed_by_name ?? undefined,
+            createdAt: t.created_at,
+          });
+        }
+      });
+      setFormFillingTasks(ff);
+      setXeroxTasks(xx);
+          setTotalTasks(total);
+
+    } catch (err) {
+      console.error("Failed to fetch tasks", err);
+    } finally {
+      setLoadingTasks(false);
+    }
   };
 
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    fetchMyTasks(currentPage);
-  }, [currentPage]);
 
-  const [activeTab, setActiveTab] = useState<TaskTab>("form_filling");
+ useEffect(() => {
+  fetchMyTasks(currentPage);
+}, [currentPage, activeTab]);
+
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [boardFilter, setBoardFilter] = useState("");
@@ -1003,6 +1016,29 @@ const AllTasksEmployee: React.FC = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label>Payment Mode</Label>
+
+                  <Select
+                    value={editingFormTask.paymentMode || ""}
+                    onValueChange={(value) =>
+                      setEditingFormTask({
+                        ...editingFormTask,
+                        paymentMode: value as "" | "cash" | "upi" | "card",
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Payment Mode" />
+                    </SelectTrigger>
+
+                    <SelectContent className="bg-popover border border-border z-50">
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="upi">UPI</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label>Payment Status</Label>
                   <Select
                     value={editingFormTask.paymentStatus}
@@ -1165,6 +1201,29 @@ const AllTasksEmployee: React.FC = () => {
                   <SelectContent className="bg-popover border border-border z-50">
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Payment Mode</Label>
+
+                <Select
+                  value={editingXeroxTask.paymentMode || ""}
+                  onValueChange={(value) =>
+                    setEditingXeroxTask({
+                      ...editingXeroxTask,
+                      paymentMode: value as "" | "cash" | "upi" | "card",
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Payment Mode" />
+                  </SelectTrigger>
+
+                  <SelectContent className="bg-popover border border-border z-50">
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="upi">UPI</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
