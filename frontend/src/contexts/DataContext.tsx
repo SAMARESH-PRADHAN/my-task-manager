@@ -401,6 +401,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         revenue: updates.revenue,
         work_status: updates.workStatus,
         payment_status: updates.paymentStatus,
+        payment_mode: updates.paymentMode,
         description: updates.description,
       });
       setFormFillingTasks((prev) =>
@@ -434,6 +435,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         deduction_amount: updates.deductionAmount,
         revenue: updates.revenue,
         payment_status: updates.paymentStatus,
+        payment_mode: updates.paymentMode,
         description: updates.description,
       });
       setXeroxTasks((prev) =>
