@@ -480,16 +480,18 @@ const AllTasks: React.FC = () => {
             }}
             className="w-64"
           />
-          <Input
-            placeholder="Search board..."
-            value={boardFilter === "all" ? "" : boardFilter}
-            onChange={(e) => {
-              const value = e.target.value;
-              setBoardFilter(value === "" ? "all" : value);
-              setCurrentPage(1);
-            }}
-            className="w-48"
-          />
+          {activeTab === "form_filling" && (
+            <Input
+              placeholder="Search board..."
+              value={boardFilter === "all" ? "" : boardFilter}
+              onChange={(e) => {
+                const value = e.target.value;
+                setBoardFilter(value === "" ? "all" : value);
+                setCurrentPage(1);
+              }}
+              className="w-48"
+            />
+          )}
           <DateFilter
             fromDate={fromDate}
             toDate={toDate}
