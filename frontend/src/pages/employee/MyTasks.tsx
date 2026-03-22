@@ -449,8 +449,7 @@ const MyTasks: React.FC = () => {
                 <TableHead>Total Amount</TableHead>
                 <TableHead>Deduction</TableHead>
                 <TableHead>Revenue</TableHead>
-                
-                
+
                 {activeTab === "form_filling" && (
                   <TableHead>Work Status</TableHead>
                 )}
@@ -500,7 +499,7 @@ const MyTasks: React.FC = () => {
                         )}
                       </div>
                     </TableCell>
-{activeTab === "form_filling" && (
+                    {activeTab === "form_filling" && (
                       <TableCell>
                         {(task as FormFillingTask).boardName || "-"}
                       </TableCell>
@@ -508,7 +507,7 @@ const MyTasks: React.FC = () => {
                     <TableCell className="max-w-[200px] truncate">
                       {task.description || "-"}
                     </TableCell>
-                    
+
                     {activeTab === "form_filling" && (
                       <>
                         <TableCell>
@@ -534,7 +533,7 @@ const MyTasks: React.FC = () => {
                     <TableCell className="font-semibold text-primary">
                       ₹{task.revenue || task.amount}
                     </TableCell>
-                    
+
                     {activeTab === "form_filling" && (
                       <TableCell>
                         <Button
@@ -546,10 +545,17 @@ const MyTasks: React.FC = () => {
                               : "bg-warning/20 text-warning hover:bg-warning/30"
                           }
                           onClick={() => {
-                            if (
-                              (task as FormFillingTask).workStatus === "pending"
-                            ) {
-                              handleUploadClick(task as FormFillingTask);
+                            const formTask = task as FormFillingTask;
+
+                            if (formTask.workStatus === "pending") {
+                              if (!formTask.applicationId) {
+                                toast.warning(
+                                  "Application ID is required before completing the task",
+                                );
+                                return;
+                              }
+
+                              handleUploadClick(formTask);
                             }
                           }}
                         >
