@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Edit, Trash2, Download } from "lucide-react";
 import { useData, FormFillingTask, XeroxTask } from "@/contexts/DataContext";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,6 @@ import { toast } from "sonner";
 import { downloadExcel } from "@/utils/excel";
 import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { formatToIST } from "@/utils/dateUtils";
-import { useEffect } from "react";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -102,6 +101,9 @@ const AllTasks: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TaskTab>("form_filling");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [fromDate, setFromDate] = useState<Date | undefined>();
   const [toDate, setToDate] = useState<Date | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
@@ -214,8 +216,17 @@ const AllTasks: React.FC = () => {
       skipNextFetch.current = false;
       return;
     }
-    fetchTasksFromDB(currentPage, ITEMS_PER_PAGE);
+    fetchTasksFromDB(currentPage, ITEMS_PER_PAGE, searchQuery, fromDate, toDate, boardFilter, activeTab);
   }, [currentPage]);
+
+  // Refetch when any filter or tab changes
+  useEffect(() => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      setCurrentPage(1);
+      fetchTasksFromDB(1, ITEMS_PER_PAGE, searchQuery, fromDate, toDate, boardFilter, activeTab);
+    }, 400);
+  }, [searchQuery, fromDate, toDate, boardFilter, activeTab]);
   const boardsCache = useRef<{ [key: string]: any[] }>({});
   const skipNextFetch = useRef(false);
 
@@ -242,46 +253,86 @@ const AllTasks: React.FC = () => {
   };
   const paginatedTasks = currentTasks;
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
     if (activeTab === "form_filling") {
-      const data = filteredFormFillingTasks.map((task, index) => ({
+      const dlParams = new URLSearchParams({ limit: '10000', offset: '0', service_type: 'form_filling' });
+      if (searchQuery) dlParams.set('search', searchQuery);
+      if (fromDate) dlParams.set('from_date', fromDate.toISOString());
+      if (toDate) { const e = new Date(toDate); e.setHours(23,59,59,999); dlParams.set('to_date', e.toISOString()); }
+      if (boardFilter && boardFilter !== 'all') dlParams.set('board', boardFilter);
+      const res = await api.get(`/tasks?${dlParams.toString()}`);
+      const allFF = res.data.tasks
+        .filter((t: any) => t.service_type === 'form_filling')
+        .filter((t: any) => {
+          if (!searchQuery) return true;
+          const q = searchQuery.toLowerCase();
+          return (t.customer_name ?? '').toLowerCase().includes(q) ||
+            (t.customer_phone ?? '').includes(searchQuery) ||
+            (t.application_id ?? '').toLowerCase().includes(q);
+        });
+      const data = allFF.map((task: any, index: number) => ({
         "Serial No": index + 1,
-        "Customer Name": task.customerName,
-        Phone: task.customerPhone,
-        Email: task.customerEmail,
-        "Service Type": (task.serviceType ?? "unknown").replace("_", " "),
-        Board: task.boardName || "-",
-        "Assigned To": task.employeeName,
-        "Completed By": task.completedByName || task.employeeName,
-        "Application ID": task.applicationId,
-        Password: task.password,
-        "Total Amount": task.amount,
-        Deduction: task.deductionAmount || 0,
-        Revenue: task.revenue || task.amount,
-        "Work Status": task.workStatus,
-        "Payment Status": task.paymentStatus,
-        Description: task.description.replace(/\n/g, " "),
-        Date: formatToIST(task.createdAt, "dd/MM/yyyy HH:mm"),
+        "Customer Name": task.customer_name ?? task.customerName ?? "",
+        Phone: task.customer_phone ?? task.customerPhone ?? "",
+        Email: task.customer_email ?? task.customerEmail ?? "",
+        "Service Type": (task.form_service_type ?? task.serviceType ?? "unknown").replace(/_/g, " "),
+        Board: task.board_name ?? task.boardName ?? "-",
+        "Assigned To": task.employee_name ?? task.employeeName ?? "",
+        "Completed By": task.completed_by_name ?? task.completedByName ?? task.employee_name ?? task.employeeName ?? "",
+        "Application ID": task.application_id ?? task.applicationId ?? "",
+        Password: task.application_password ?? task.password ?? "",
+        "Total Amount": task.total_amount ?? task.amount ?? 0,
+        Deduction: task.deduction_amount ?? task.deductionAmount ?? 0,
+        Revenue: task.revenue ?? 0,
+        "Work Status": task.work_status ?? task.workStatus ?? "",
+        "Payment Status": task.payment_status ?? task.paymentStatus ?? "",
+        "Payment Mode": task.payment_mode ?? task.paymentMode ?? "",
+        Description: (task.description ?? "").replace(/\n/g, " "),
+        Date: formatToIST(task.created_at ?? task.createdAt, "dd/MM/yyyy HH:mm"),
       }));
       downloadExcel(data, "online_tasks");
     } else {
-      const data = filteredXeroxTasks.map((task, index) => ({
+      const dlParams2 = new URLSearchParams({ limit: '10000', offset: '0', service_type: 'xerox' });
+      if (searchQuery) dlParams2.set('search', searchQuery);
+      if (fromDate) dlParams2.set('from_date', fromDate.toISOString());
+      if (toDate) { const e2 = new Date(toDate); e2.setHours(23,59,59,999); dlParams2.set('to_date', e2.toISOString()); }
+      if (boardFilter && boardFilter !== 'all') dlParams2.set('board', boardFilter);
+      const res2 = await api.get(`/tasks?${dlParams2.toString()}`);
+      const allXX = res2.data.tasks
+        .filter((t: any) => t.service_type === 'xerox')
+        .filter((t: any) => {
+          if (!searchQuery) return true;
+          const q = searchQuery.toLowerCase();
+          return (t.customer_name ?? '').toLowerCase().includes(q) ||
+            (t.customer_phone ?? '').includes(searchQuery) ||
+            (t.description ?? '').toLowerCase().includes(q);
+        });
+      const data = allXX.map((task: any, index: number) => ({
         "Serial No": index + 1,
-        "Customer Name": task.customerName,
-        Phone: task.customerPhone,
-        Email: task.customerEmail,
-        "Assigned To": task.employeeName,
-        "Completed By": task.completedByName || task.employeeName,
-        "Total Amount": task.amount,
-        Deduction: task.deductionAmount || 0,
-        Revenue: task.revenue || task.amount,
-        "Payment Status": task.paymentStatus,
-        Description: task.description.replace(/\n/g, " "),
-        Date: formatToIST(task.createdAt, "dd/MM/yyyy HH:mm"),
+        "Customer Name": task.customer_name ?? task.customerName ?? "",
+        Phone: task.customer_phone ?? task.customerPhone ?? "",
+        Email: task.customer_email ?? task.customerEmail ?? "",
+        "Assigned To": task.employee_name ?? task.employeeName ?? "",
+        "Completed By": task.completed_by_name ?? task.completedByName ?? task.employee_name ?? task.employeeName ?? "",
+        "Total Amount": task.total_amount ?? task.amount ?? 0,
+        Deduction: task.deduction_amount ?? task.deductionAmount ?? 0,
+        Revenue: task.revenue ?? 0,
+        "Payment Status": task.payment_status ?? task.paymentStatus ?? "",
+        "Payment Mode": task.payment_mode ?? task.paymentMode ?? "",
+        Description: (task.description ?? "").replace(/\n/g, " "),
+        Date: formatToIST(task.created_at ?? task.createdAt, "dd/MM/yyyy HH:mm"),
       }));
       downloadExcel(data, "xerox_tasks");
     }
-    toast.success("Tasks exported successfully!");
+      toast.success("Tasks exported successfully!");
+    } catch (err) {
+      toast.error("Failed to export tasks");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   //this function is use to send filter task notification system
@@ -499,9 +550,9 @@ const AllTasks: React.FC = () => {
             onToDateChange={setToDate}
           />
         </div>
-        <Button onClick={handleDownload} variant="outline">
+        <Button onClick={handleDownload} variant="outline" disabled={isDownloading}>
           <Download className="h-4 w-4 mr-2" />
-          Download Excel
+          {isDownloading ? "Downloading..." : "Download Excel"}
         </Button>
       </div>
       <Button
