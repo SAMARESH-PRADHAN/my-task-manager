@@ -14,8 +14,23 @@ router.get("/", auth, async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 10;
     const offset = Number(req.query.offset) || 0;
+    const search = req.query.search ? `%${req.query.search}%` : null;
+    const fromDate = req.query.from_date ? new Date(req.query.from_date) : null;
+    const toDate = req.query.to_date ? new Date(req.query.to_date) : null;
+    const board = req.query.board && req.query.board !== 'all' ? req.query.board : null;
+    const serviceType = req.query.service_type || null; // 'form_filling' or 'xerox'
 
-    const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM tasks`;
+    const [{ count }] = await sql`
+      SELECT COUNT(*)::int AS count
+      FROM tasks t
+      LEFT JOIN customers c ON c.id = t.customer_id
+      WHERE 1=1
+        ${serviceType ? sql`AND t.service_type = ${serviceType}` : sql``}
+        ${search ? sql`AND (c.name ILIKE ${search} OR c.phone ILIKE ${search} OR t.application_id ILIKE ${search} OR t.description ILIKE ${search})` : sql``}
+        ${fromDate ? sql`AND t.created_at >= ${fromDate}` : sql``}
+        ${toDate ? sql`AND t.created_at <= ${toDate}` : sql``}
+        ${board ? sql`AND t.board_name ILIKE ${`%${board}%`}` : sql``}
+    `;
 
     const tasks = await sql`
       SELECT
@@ -30,6 +45,12 @@ router.get("/", auth, async (req, res) => {
       LEFT JOIN customers c  ON c.id  = t.customer_id
       LEFT JOIN users     e  ON e.id  = t.employee_id
       LEFT JOIN users     cb ON cb.id = t.completed_by
+      WHERE 1=1
+        ${serviceType ? sql`AND t.service_type = ${serviceType}` : sql``}
+        ${search ? sql`AND (c.name ILIKE ${search} OR c.phone ILIKE ${search} OR t.application_id ILIKE ${search} OR t.description ILIKE ${search})` : sql``}
+        ${fromDate ? sql`AND t.created_at >= ${fromDate}` : sql``}
+        ${toDate ? sql`AND t.created_at <= ${toDate}` : sql``}
+        ${board ? sql`AND t.board_name ILIKE ${`%${board}%`}` : sql``}
       ORDER BY t.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
@@ -167,27 +188,23 @@ router.get("/stats/dashboard", auth, async (req, res) => {
         `;
 
     let pendingCount = 0;
-    pendingQuery.forEach((t) => {
-      if (t.service_type === "form_filling") {
-        if (t.work_status === "pending") pendingCount++;
-        if (t.payment_status === "pending" || t.payment_status === "unpaid")
-          pendingCount++;
-      } else if (t.service_type === "xerox") {
-        if (t.payment_status === "pending" || t.payment_status === "unpaid")
-          pendingCount++;
+    pendingQuery.forEach(t => {
+      if (t.service_type === 'form_filling') {
+        if (t.work_status === 'pending') pendingCount++;
+        if (t.payment_status === 'pending' || t.payment_status === 'unpaid') pendingCount++;
+      } else if (t.service_type === 'xerox') {
+        if (t.payment_status === 'pending' || t.payment_status === 'unpaid') pendingCount++;
       }
     });
 
-    const formFilling = tasks.filter((t) => t.service_type === "form_filling");
-    const xerox = tasks.filter((t) => t.service_type === "xerox");
+    const formFilling = tasks.filter(t => t.service_type === 'form_filling');
+    const xerox = tasks.filter(t => t.service_type === 'xerox');
 
-    const todayRevenue = tasks
-      .filter((t) => t.payment_status === "completed") // ✅ only completed
-      .reduce((sum, t) => sum + Number(t.revenue || t.total_amount || 0), 0);
+    const todayRevenue =
+      tasks.reduce((sum, t) => sum + Number(t.revenue || t.total_amount || 0), 0);
 
     // Total customers count
-    const [{ count: totalCustomers }] =
-      await sql`SELECT COUNT(*)::int AS count FROM customers`;
+    const [{ count: totalCustomers }] = await sql`SELECT COUNT(*)::int AS count FROM customers`;
 
     // Today's customers
     const [{ count: todayCustomers }] = await sql`
@@ -207,25 +224,11 @@ router.get("/stats/dashboard", auth, async (req, res) => {
     const totalRevenue = lifetimeStats[0].total_revenue;
 
     // Revenue by service type
-    const getRevenue = (t) =>
-      t.payment_status === "completed"
-        ? Number(t.revenue || t.total_amount || 0)
-        : 0;
-
     const revenueByService = {
-      job_seeker: formFilling
-        .filter((t) => t.form_service_type === "job_seeker")
-        .reduce((s, t) => s + getRevenue(t), 0),
-
-      student: formFilling
-        .filter((t) => t.form_service_type === "student")
-        .reduce((s, t) => s + getRevenue(t), 0),
-
-      gov_scheme: formFilling
-        .filter((t) => t.form_service_type === "gov_scheme")
-        .reduce((s, t) => s + getRevenue(t), 0),
-
-      xerox: xerox.reduce((s, t) => s + getRevenue(t), 0),
+      job_seeker: formFilling.filter(t => t.form_service_type === 'job_seeker').reduce((s, t) => s + Number(t.revenue || t.total_amount || 0), 0),
+      student: formFilling.filter(t => t.form_service_type === 'student').reduce((s, t) => s + Number(t.revenue || t.total_amount || 0), 0),
+      gov_scheme: formFilling.filter(t => t.form_service_type === 'gov_scheme').reduce((s, t) => s + Number(t.revenue || t.total_amount || 0), 0),
+      xerox: xerox.reduce((s, t) => s + Number(t.revenue || t.total_amount || 0), 0),
     };
 
     res.json({
@@ -238,14 +241,9 @@ router.get("/stats/dashboard", auth, async (req, res) => {
       totalTasks,
       totalRevenue,
       serviceBreakdown: {
-        job_seeker: formFilling.filter(
-          (t) => t.form_service_type === "job_seeker",
-        ).length,
-        student: formFilling.filter((t) => t.form_service_type === "student")
-          .length,
-        gov_scheme: formFilling.filter(
-          (t) => t.form_service_type === "gov_scheme",
-        ).length,
+        job_seeker: formFilling.filter(t => t.form_service_type === 'job_seeker').length,
+        student: formFilling.filter(t => t.form_service_type === 'student').length,
+        gov_scheme: formFilling.filter(t => t.form_service_type === 'gov_scheme').length,
         xerox: xerox.length,
       },
       revenueByService,
@@ -254,11 +252,9 @@ router.get("/stats/dashboard", auth, async (req, res) => {
             tasks.reduce((acc, t) => {
               const id = String(t.employee_id);
               if (!acc[id]) acc[id] = { employeeId: id, revenue: 0 };
-              if (t.payment_status === "completed") {
-                acc[id].revenue += Number(t.revenue || t.total_amount || 0);
-              }
+              acc[id].revenue += Number(t.revenue || t.total_amount || 0);
               return acc;
-            }, {}),
+            }, {})
           )
         : [],
     });
@@ -289,7 +285,7 @@ router.get("/stats/employees", auth, async (req, res) => {
 
     // Group by employee
     const statsMap = {};
-    tasks.forEach((t) => {
+    tasks.forEach(t => {
       const id = String(t.employee_id);
       if (!statsMap[id]) {
         statsMap[id] = { employeeId: id, tasks: [] };
@@ -347,7 +343,7 @@ router.get("/stats/analytics", auth, async (req, res) => {
     // All tasks for trend (wider range)
     const trendTasks = await sql`
       SELECT service_type, form_service_type, revenue, total_amount,
-             deduction_amount, employee_id, created_at, payment_status
+             deduction_amount, employee_id, created_at
       FROM tasks
       WHERE created_at >= ${rangeStart}
       ORDER BY created_at ASC
@@ -356,57 +352,39 @@ router.get("/stats/analytics", auth, async (req, res) => {
     // Current period tasks only (for summary, pie, bar charts)
     const periodTasks = await sql`
       SELECT service_type, form_service_type, revenue, total_amount,
-             deduction_amount, employee_id, created_at, payment_status
+             deduction_amount, employee_id, created_at
       FROM tasks
       WHERE created_at >= ${periodStart}
     `;
 
-    const getRevenue = (t) =>
-      t.payment_status === "completed"
-        ? Number(t.revenue || t.total_amount || 0)
-        : 0;
+    const getRevenue = (t) => Number(t.revenue || t.total_amount || 0);
 
-    const formFilling = periodTasks.filter(
-      (t) => t.service_type === "form_filling",
-    );
-    const xerox = periodTasks.filter((t) => t.service_type === "xerox");
+    const formFilling = periodTasks.filter(t => t.service_type === 'form_filling');
+    const xerox = periodTasks.filter(t => t.service_type === 'xerox');
 
     // Service distribution (current period)
     const serviceDistribution = {
-      job_seeker: formFilling.filter(
-        (t) => t.form_service_type === "job_seeker",
-      ).length,
-      student: formFilling.filter((t) => t.form_service_type === "student")
-        .length,
-      gov_scheme: formFilling.filter(
-        (t) => t.form_service_type === "gov_scheme",
-      ).length,
+      job_seeker: formFilling.filter(t => t.form_service_type === 'job_seeker').length,
+      student: formFilling.filter(t => t.form_service_type === 'student').length,
+      gov_scheme: formFilling.filter(t => t.form_service_type === 'gov_scheme').length,
       xerox: xerox.length,
     };
 
     // Revenue by service (current period)
     const revenueByService = {
-      job_seeker: formFilling
-        .filter((t) => t.form_service_type === "job_seeker")
-        .reduce((s, t) => s + getRevenue(t), 0),
-      student: formFilling
-        .filter((t) => t.form_service_type === "student")
-        .reduce((s, t) => s + getRevenue(t), 0),
-      gov_scheme: formFilling
-        .filter((t) => t.form_service_type === "gov_scheme")
-        .reduce((s, t) => s + getRevenue(t), 0),
+      job_seeker: formFilling.filter(t => t.form_service_type === 'job_seeker').reduce((s, t) => s + getRevenue(t), 0),
+      student: formFilling.filter(t => t.form_service_type === 'student').reduce((s, t) => s + getRevenue(t), 0),
+      gov_scheme: formFilling.filter(t => t.form_service_type === 'gov_scheme').reduce((s, t) => s + getRevenue(t), 0),
       xerox: xerox.reduce((s, t) => s + getRevenue(t), 0),
     };
 
     // Employee performance (current period) with formFilling + xerox split
     const empMap = {};
-    periodTasks.forEach((t) => {
+    periodTasks.forEach(t => {
       const id = String(t.employee_id);
-      if (!empMap[id])
-        empMap[id] = { employeeId: id, formFilling: 0, xerox: 0 };
-      if (t.service_type === "form_filling")
-        empMap[id].formFilling += getRevenue(t);
-      else if (t.service_type === "xerox") empMap[id].xerox += getRevenue(t);
+      if (!empMap[id]) empMap[id] = { employeeId: id, formFilling: 0, xerox: 0 };
+      if (t.service_type === 'form_filling') empMap[id].formFilling += getRevenue(t);
+      else if (t.service_type === 'xerox') empMap[id].xerox += getRevenue(t);
     });
     const employeePerformance = Object.values(empMap).map((e) => ({
       ...e,
@@ -416,58 +394,53 @@ router.get("/stats/analytics", auth, async (req, res) => {
     // Build all expected keys for the range
     const trendMap = {};
 
-    if (range === "daily") {
+    if (range === 'daily') {
       for (let i = 6; i >= 0; i--) {
         const d = new Date(now);
         d.setDate(d.getDate() - i);
-        const key = d.toISOString().split("T")[0];
+        const key = d.toISOString().split('T')[0];
         trendMap[key] = { formFilling: 0, xerox: 0 };
       }
-    } else if (range === "weekly") {
+    } else if (range === 'weekly') {
       for (let i = 3; i >= 0; i--) {
         const d = new Date(now);
-        d.setDate(d.getDate() - i * 7);
+        d.setDate(d.getDate() - (i * 7));
         // Start of that week (Sunday)
         d.setDate(d.getDate() - d.getDay());
-        const key = d.toISOString().split("T")[0];
+        const key = d.toISOString().split('T')[0];
         trendMap[key] = { formFilling: 0, xerox: 0 };
       }
     } else {
       for (let i = 5; i >= 0; i--) {
         const d = new Date(now);
         d.setMonth(d.getMonth() - i);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         trendMap[key] = { formFilling: 0, xerox: 0 };
       }
     }
 
     // Fill in actual data
-    trendTasks.forEach((t) => {
+    trendTasks.forEach(t => {
       let key;
       const d = new Date(t.created_at);
-      if (range === "daily") {
-        key = d.toISOString().split("T")[0];
-      } else if (range === "weekly") {
+      if (range === 'daily') {
+        key = d.toISOString().split('T')[0];
+      } else if (range === 'weekly') {
         const weekStart = new Date(d);
         weekStart.setDate(d.getDate() - d.getDay());
-        key = weekStart.toISOString().split("T")[0];
+        key = weekStart.toISOString().split('T')[0];
       } else {
-        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       }
       if (trendMap[key]) {
-        if (t.service_type === "form_filling")
-          trendMap[key].formFilling += getRevenue(t);
-        else if (t.service_type === "xerox")
-          trendMap[key].xerox += getRevenue(t);
+        if (t.service_type === 'form_filling') trendMap[key].formFilling += getRevenue(t);
+        else if (t.service_type === 'xerox') trendMap[key].xerox += getRevenue(t);
       }
     });
 
     const totalRevenue = periodTasks.reduce((s, t) => s + getRevenue(t), 0);
     const totalTasks = periodTasks.length;
-    const totalDeduction = periodTasks.reduce(
-      (s, t) => s + Number(t.deduction_amount || 0),
-      0,
-    );
+    const totalDeduction = periodTasks.reduce((s, t) => s + Number(t.deduction_amount || 0), 0);
 
     res.json({
       totalRevenue,

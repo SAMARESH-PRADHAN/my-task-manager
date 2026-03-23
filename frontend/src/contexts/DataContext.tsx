@@ -111,7 +111,7 @@ interface DataContextType {
   updateEmployee: (id: string, updates: Partial<Employee>) => Promise<void>;
 
   refreshAll: () => Promise<void>;
-  fetchTasksFromDB: (page?: number, limit?: number) => Promise<void>;
+  fetchTasksFromDB: (page?: number, limit?: number, search?: string, fromDate?: Date, toDate?: Date, board?: string, serviceType?: string) => Promise<void>;
   totalTasks: number;
 }
 
@@ -187,10 +187,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   /* =========================
      FETCH TASKS FROM DB
   ========================= */
-  const fetchTasksFromDB = async (page = 1, limit = 10) => {
+  const fetchTasksFromDB = async (page = 1, limit = 10, search = '', fromDate?: Date, toDate?: Date, board?: string, serviceType?: string) => {
     const offset = (page - 1) * limit;
+    const params = new URLSearchParams();
+    params.set('limit', String(limit));
+    params.set('offset', String(offset));
+    if (search) params.set('search', search);
+    if (fromDate) params.set('from_date', fromDate.toISOString());
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      params.set('to_date', end.toISOString());
+    }
+    if (board && board !== 'all') params.set('board', board);
+    if (serviceType) params.set('service_type', serviceType);
 
-    const res = await api.get(`/tasks?limit=${limit}&offset=${offset}`);
+    const res = await api.get(`/tasks?${params.toString()}`);
 
     const { tasks: rawTasks, total } = res.data;
     setTotalTasks(total);
@@ -401,7 +413,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         revenue: updates.revenue,
         work_status: updates.workStatus,
         payment_status: updates.paymentStatus,
-        payment_mode: updates.paymentMode,
         description: updates.description,
       });
       setFormFillingTasks((prev) =>
@@ -435,7 +446,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         deduction_amount: updates.deductionAmount,
         revenue: updates.revenue,
         payment_status: updates.paymentStatus,
-        payment_mode: updates.paymentMode,
         description: updates.description,
       });
       setXeroxTasks((prev) =>
