@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { Edit, Trash2, Download } from "lucide-react";
+import { Edit, Trash2, Download, Loader2 } from "lucide-react";
 import { useData, FormFillingTask, XeroxTask } from "@/contexts/DataContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,6 +102,7 @@ const AllTasks: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [fromDate, setFromDate] = useState<Date | undefined>();
@@ -127,6 +128,10 @@ const AllTasks: React.FC = () => {
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [sendingNotification, setSendingNotification] = useState(false);
+  const [notifyStep, setNotifyStep] = useState<"compose" | "sending" | "done">("compose");
+  const [notifyProgress, setNotifyProgress] = useState({ sent: 0, failed: 0, total: 0 });
+  const [notifyFailedNumbers, setNotifyFailedNumbers] = useState<string[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Delete confirmation
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -216,15 +221,21 @@ const AllTasks: React.FC = () => {
       skipNextFetch.current = false;
       return;
     }
-    fetchTasksFromDB(currentPage, ITEMS_PER_PAGE, searchQuery, fromDate, toDate, boardFilter, activeTab);
+    setIsFetching(true);
+    fetchTasksFromDB(currentPage, ITEMS_PER_PAGE, searchQuery, fromDate, toDate, boardFilter, activeTab)
+      .finally(() => setIsFetching(false));
   }, [currentPage]);
 
   // Refetch when any filter or tab changes
   useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    searchTimeoutRef.current = setTimeout(() => {
+    setIsSearching(true);
+    setIsFetching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
       setCurrentPage(1);
-      fetchTasksFromDB(1, ITEMS_PER_PAGE, searchQuery, fromDate, toDate, boardFilter, activeTab);
+      await fetchTasksFromDB(1, ITEMS_PER_PAGE, searchQuery, fromDate, toDate, boardFilter, activeTab);
+      setIsSearching(false);
+      setIsFetching(false);
     }, 400);
   }, [searchQuery, fromDate, toDate, boardFilter, activeTab]);
   const boardsCache = useRef<{ [key: string]: any[] }>({});
@@ -335,6 +346,42 @@ const AllTasks: React.FC = () => {
     }
   };
 
+  // Total recipient count for the notification modal (fetched from backend)
+  const [notifyRecipientCount, setNotifyRecipientCount] = useState<number | null>(null);
+
+  // Fetch recipient count whenever the notify modal opens or filters change
+  useEffect(() => {
+    if (!isNotifyModalOpen) return;
+    let cancelled = false;
+    const fetchCount = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.set("service_type", activeTab);
+        if (searchQuery) params.set("search", searchQuery);
+        if (fromDate) params.set("from_date", fromDate.toISOString());
+        if (toDate) { const e = new Date(toDate); e.setHours(23, 59, 59, 999); params.set("to_date", e.toISOString()); }
+        if (boardFilter && boardFilter !== "all") params.set("board", boardFilter);
+        if (statusFilter !== "all") params.set("status_filter", statusFilter);
+        const res = await api.get(`/tasks/phones?${params.toString()}`);
+        if (!cancelled) setNotifyRecipientCount(res.data.total);
+      } catch {
+        if (!cancelled) setNotifyRecipientCount(null);
+      }
+    };
+    fetchCount();
+    return () => { cancelled = true; };
+  }, [isNotifyModalOpen, activeTab, searchQuery, fromDate, toDate, boardFilter, statusFilter]);
+
+  // Open modal with clean state
+  const openNotifyModal = () => {
+    setNotifyStep("compose");
+    setNotifyProgress({ sent: 0, failed: 0, total: 0 });
+    setNotifyFailedNumbers([]);
+    setShowPreview(false);
+    setNotificationMessage("");
+    setIsNotifyModalOpen(true);
+  };
+
   //this function is use to send filter task notification system
   const handleNotifyFiltered = async () => {
     if (!notificationMessage.trim()) {
@@ -342,29 +389,86 @@ const AllTasks: React.FC = () => {
       return;
     }
 
+    // Fetch ALL matching phones
+    const params = new URLSearchParams();
+    params.set("service_type", activeTab);
+    if (searchQuery) params.set("search", searchQuery);
+    if (fromDate) params.set("from_date", fromDate.toISOString());
+    if (toDate) { const e = new Date(toDate); e.setHours(23, 59, 59, 999); params.set("to_date", e.toISOString()); }
+    if (boardFilter && boardFilter !== "all") params.set("board", boardFilter);
+    if (statusFilter !== "all") params.set("status_filter", statusFilter);
+
+    let uniquePhones: string[] = [];
     try {
-      setSendingNotification(true);
+      const phonesRes = await api.get(`/tasks/phones?${params.toString()}`);
+      uniquePhones = phonesRes.data.phones;
+    } catch (err) {
+      toast.error("Failed to fetch recipient list");
+      return;
+    }
 
-      const phones =
-        activeTab === "form_filling"
-          ? filteredFormFillingTasks.map((t) => t.customerPhone)
-          : filteredXeroxTasks.map((t) => t.customerPhone);
+    if (uniquePhones.length === 0) {
+      toast.error("No customers found for the current filters");
+      return;
+    }
 
-      // Remove duplicate numbers
-      const uniquePhones = [...new Set(phones.filter(Boolean))];
+    // Switch to sending step
+    setSendingNotification(true);
+    setNotifyProgress({ sent: 0, failed: 0, total: uniquePhones.length });
+    setNotifyStep("sending");
 
-      await api.post("/task-notifications", {
-        message: notificationMessage,
-        phones: uniquePhones,
+    try {
+      const token = localStorage.getItem("token");
+      const baseUrl = (api.defaults?.baseURL ?? "").replace(/\/$/, "");
+
+      const response = await fetch(`${baseUrl}/task-notifications/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ message: notificationMessage, phones: uniquePhones }),
       });
 
-      toast.success(`Notification sent to ${uniquePhones.length} customers`);
+      if (!response.ok || !response.body) {
+        throw new Error("Stream request failed");
+      }
 
-      setNotificationMessage("");
-      setIsNotifyModalOpen(false);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data:")) continue;
+          try {
+            const event = JSON.parse(line.slice(5).trim());
+            if (event.type === "progress") {
+              setNotifyProgress({ sent: event.sent, failed: event.failed, total: event.total });
+            } else if (event.type === "done") {
+              setNotifyProgress({ sent: event.sent, failed: event.failed, total: event.total });
+              setNotifyFailedNumbers(event.failedNumbers ?? []);
+              setNotifyStep("done");
+            } else if (event.type === "error") {
+              toast.error(event.message ?? "Stream error");
+              setNotifyStep("compose");
+            }
+          } catch {
+            // malformed event line — skip
+          }
+        }
+      }
     } catch (err) {
       console.error(err);
       toast.error("Failed to send notifications");
+      setNotifyStep("compose");
     } finally {
       setSendingNotification(false);
     }
@@ -482,7 +586,9 @@ const AllTasks: React.FC = () => {
               : ""
           }
         >
-          Online Service
+          {activeTab === "form_filling" && isFetching
+            ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Loading...</>
+            : "Online Service"}
         </Button>
         <Button
           variant={activeTab === "xerox" ? "default" : "outline"}
@@ -497,7 +603,9 @@ const AllTasks: React.FC = () => {
               : ""
           }
         >
-          Offline Service
+          {activeTab === "xerox" && isFetching
+            ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Loading...</>
+            : "Offline Service"}
         </Button>
       </div>
 
@@ -522,26 +630,36 @@ const AllTasks: React.FC = () => {
       {/* Filters */}
       <div className="flex flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-4 items-center">
-          <Input
-            placeholder="Search by customer name or phone or description..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-64"
-          />
-          {activeTab === "form_filling" && (
+          <div className="relative w-64">
             <Input
-              placeholder="Search board..."
-              value={boardFilter === "all" ? "" : boardFilter}
+              placeholder="Search by name, phone, description..."
+              value={searchQuery}
               onChange={(e) => {
-                const value = e.target.value;
-                setBoardFilter(value === "" ? "all" : value);
+                setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-48"
+              className="w-full pr-8"
             />
+            {isSearching && (
+              <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          {activeTab === "form_filling" && (
+            <div className="relative w-48">
+              <Input
+                placeholder="Search board..."
+                value={boardFilter === "all" ? "" : boardFilter}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setBoardFilter(value === "" ? "all" : value);
+                  setCurrentPage(1);
+                }}
+                className="w-full pr-8"
+              />
+              {isSearching && (
+                <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
           )}
           <DateFilter
             fromDate={fromDate}
@@ -555,12 +673,25 @@ const AllTasks: React.FC = () => {
           {isDownloading ? "Downloading..." : "Download Excel"}
         </Button>
       </div>
-      <Button
-        onClick={() => setIsNotifyModalOpen(true)}
-        className="gradient-primary text-primary-foreground"
-      >
-        Notify Customers
-      </Button>
+      <div className="flex items-center justify-between">
+        <Button
+          onClick={openNotifyModal}
+          className="gradient-primary text-primary-foreground"
+        >
+          Notify Customers
+        </Button>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          {isFetching ? (
+            <><Loader2 className="h-4 w-4 animate-spin" /><span>Searching...</span></>
+          ) : (
+            <span>
+              {totalTasks > 0
+                ? `Showing ${(currentPage - 1) * ITEMS_PER_PAGE + 1}–${Math.min(currentPage * ITEMS_PER_PAGE, totalTasks)} of ${totalTasks} results`
+                : "No results found"}
+            </span>
+          )}
+        </div>
+      </div>
       {/* Table */}
       <Card className="shadow-card relative group">
         <div className="absolute left-2 top-1/2 -translate-y-1/2 z-30 invisible group-hover:visible">
@@ -585,7 +716,15 @@ const AllTasks: React.FC = () => {
         </div>
 
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto relative">
+            {isFetching && (
+              <div className="absolute inset-0 z-20 bg-background/60 backdrop-blur-[1px] flex items-center justify-center rounded-b-lg">
+                <div className="flex items-center gap-2 bg-background border border-border rounded-full px-4 py-2 shadow-lg text-sm font-medium">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span>Loading...</span>
+                </div>
+              </div>
+            )}
             {activeTab === "form_filling" ? (
               <Table ref={scrollContainerRef}>
                 <TableHeader>
@@ -862,11 +1001,13 @@ const AllTasks: React.FC = () => {
       </Card>
 
       {totalPages > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
+        <div className={isFetching ? "opacity-50 pointer-events-none" : ""}>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       )}
 
       {/* =====================
@@ -1392,47 +1533,193 @@ const AllTasks: React.FC = () => {
       </AlertDialog>
 
       {/*notification box*/}
-      <Dialog open={isNotifyModalOpen} onOpenChange={setIsNotifyModalOpen}>
+      <Dialog
+        open={isNotifyModalOpen}
+        onOpenChange={(open) => {
+          // Prevent closing while sending
+          if (!open && notifyStep === "sending") return;
+          setIsNotifyModalOpen(open);
+        }}
+      >
         <DialogContent className="bg-card border border-border max-w-lg">
           <DialogHeader>
-            <DialogTitle>Send Notification</DialogTitle>
+            <DialogTitle>
+              {notifyStep === "compose" && "Send Notification"}
+              {notifyStep === "sending" && "Sending Messages..."}
+              {notifyStep === "done" && "All Done!"}
+            </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="text-sm text-muted-foreground">
-              This message will be sent to all customers currently visible in
-              the filtered list.
-            </div>
+          {/* ── STEP 1: COMPOSE ── */}
+          {notifyStep === "compose" && (
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                This message will be sent to all customers in the filtered list.
+              </div>
 
-            <div className="space-y-2">
-              <Label>Notification Message</Label>
-              <Textarea
-                placeholder="Type your notification message..."
-                value={notificationMessage}
-                onChange={(e) => setNotificationMessage(e.target.value)}
-                rows={4}
-              />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Notification Message</Label>
+                  <span className={`text-xs ${notificationMessage.length > 900 ? "text-destructive" : "text-muted-foreground"}`}>
+                    {notificationMessage.length} / 1000
+                  </span>
+                </div>
+                <Textarea
+                  placeholder="Type your notification message..."
+                  value={notificationMessage}
+                  onChange={(e) => setNotificationMessage(e.target.value.slice(0, 1000))}
+                  rows={4}
+                />
+              </div>
+
+              {/* WhatsApp-style preview */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview((p) => !p)}
+                  className="text-xs text-primary underline underline-offset-2"
+                >
+                  {showPreview ? "Hide preview" : "Preview message"}
+                </button>
+                {showPreview && (
+                  <div className="mt-2 rounded-xl border border-border bg-muted/40 p-3">
+                    <p className="text-xs text-muted-foreground mb-2 font-medium">WhatsApp Preview</p>
+                    <div className="flex justify-end">
+                      <div
+                        className="max-w-[85%] rounded-tl-2xl rounded-tr-sm rounded-b-2xl px-4 py-2 text-sm shadow"
+                        style={{ backgroundColor: "#dcf8c6", color: "#111" }}
+                      >
+                        {notificationMessage.trim() ? (
+                          <p className="whitespace-pre-wrap break-words">{notificationMessage}</p>
+                        ) : (
+                          <p className="italic opacity-40">Your message will appear here...</p>
+                        )}
+                        <p className="text-right text-xs mt-1 opacity-60">
+                          {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ✓✓
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="text-sm text-primary font-medium">
+                Recipients:{" "}
+                {notifyRecipientCount === null ? "Loading..." : `${notifyRecipientCount} customers`}
+                {boardFilter !== "all" && (
+                  <span className="ml-1 text-muted-foreground font-normal">
+                    (board &ldquo;{boardFilter}&rdquo;)
+                  </span>
+                )}
+                {notifyRecipientCount !== null && notifyRecipientCount > 0 && (
+                  <span className="ml-2 text-muted-foreground font-normal">
+                    · ~{Math.ceil((notifyRecipientCount * 1.5) / 60)} min
+                  </span>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setIsNotifyModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleNotifyFiltered}
+                  disabled={!notificationMessage.trim()}
+                  className="gradient-primary text-primary-foreground"
+                >
+                  Send Notification
+                </Button>
+              </div>
             </div>
-            <div className="text-sm text-primary font-medium">
-              Recipients: {currentTasks.length} customers
+          )}
+
+          {/* ── STEP 2: SENDING ── */}
+          {notifyStep === "sending" && (
+            <div className="space-y-5 py-2">
+              <div className="text-sm text-muted-foreground text-center">
+                Please keep this window open while messages are being sent.
+              </div>
+
+              {/* Progress bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-medium">
+                  <span>
+                    {notifyProgress.sent + notifyProgress.failed} / {notifyProgress.total}
+                  </span>
+                  <span className="text-muted-foreground">
+                    ~{Math.ceil(((notifyProgress.total - notifyProgress.sent - notifyProgress.failed) * 1.5) / 60)} min left
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                  <div
+                    className="h-3 rounded-full transition-all duration-500"
+                    style={{
+                      width: notifyProgress.total
+                        ? `${(((notifyProgress.sent + notifyProgress.failed) / notifyProgress.total) * 100).toFixed(1)}%`
+                        : "0%",
+                      backgroundColor: "hsl(var(--primary))",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Counters */}
+              <div className="flex justify-center gap-8 text-sm">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-500">{notifyProgress.sent}</p>
+                  <p className="text-muted-foreground">Delivered</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-destructive">{notifyProgress.failed}</p>
+                  <p className="text-muted-foreground">Failed</p>
+                </div>
+              </div>
+
+              <p className="text-center text-xs text-muted-foreground animate-pulse">
+                Sending messages, please wait...
+              </p>
             </div>
-            <div className="flex justify-end gap-3">
+          )}
+
+          {/* ── STEP 3: DONE ── */}
+          {notifyStep === "done" && (
+            <div className="space-y-5 py-2 text-center">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                  <svg className="w-9 h-9 text-green-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xl font-bold">
+                  {notifyProgress.sent} message{notifyProgress.sent !== 1 ? "s" : ""} sent!
+                </p>
+                {notifyProgress.failed > 0 && (
+                  <p className="text-sm text-destructive mt-1">
+                    {notifyProgress.failed} failed
+                  </p>
+                )}
+              </div>
+
+              {notifyFailedNumbers.length > 0 && (
+                <div className="text-left bg-muted rounded-lg p-3 space-y-1 max-h-32 overflow-y-auto">
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">Failed numbers:</p>
+                  {notifyFailedNumbers.map((n) => (
+                    <p key={n} className="text-xs text-destructive font-mono">{n}</p>
+                  ))}
+                </div>
+              )}
+
               <Button
-                variant="outline"
                 onClick={() => setIsNotifyModalOpen(false)}
+                className="gradient-primary text-primary-foreground w-full"
               >
-                Cancel
-              </Button>
-
-              <Button
-                onClick={handleNotifyFiltered}
-                disabled={sendingNotification}
-                className="gradient-primary text-primary-foreground"
-              >
-                {sendingNotification ? "Sending..." : "Send Notification"}
+                Close
               </Button>
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

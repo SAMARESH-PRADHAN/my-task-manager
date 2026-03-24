@@ -58,6 +58,106 @@ import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 
 const ITEMS_PER_PAGE = 6;
 
+// ─── Shimmer Skeleton Helpers ────────────────────────────────────────────────
+
+const shimmerStyle: React.CSSProperties = {
+  background:
+    "linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--muted-foreground)/0.1) 50%, hsl(var(--muted)) 75%)",
+  backgroundSize: "200% 100%",
+  animation: "shimmer 1.5s infinite",
+  borderRadius: "6px",
+};
+
+if (typeof document !== "undefined" && !document.getElementById("shimmer-style")) {
+  const style = document.createElement("style");
+  style.id = "shimmer-style";
+  style.textContent = `
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+const Shimmer: React.FC<{ width?: string; height?: string; className?: string }> = ({
+  width = "100%",
+  height = "16px",
+  className = "",
+}) => (
+  <div style={{ ...shimmerStyle, width, height }} className={className} />
+);
+
+const EmployeeCardSkeleton: React.FC = () => (
+  <Card className="shadow-card">
+    <CardContent className="p-6">
+      {/* Header row: avatar + name/email/phone + menu */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-4">
+          <div
+            style={{ ...shimmerStyle, width: 56, height: 56, borderRadius: "50%" }}
+          />
+          <div className="space-y-2">
+            <Shimmer width="130px" height="18px" />
+            <Shimmer width="160px" height="13px" />
+            <Shimmer width="100px" height="13px" />
+          </div>
+        </div>
+        <Shimmer width="28px" height="28px" className="rounded-md" />
+      </div>
+
+      {/* Stats grid */}
+      <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex flex-col items-center p-2 bg-muted/50 rounded-lg gap-2">
+            <Shimmer width="20px" height="20px" className="rounded-full" />
+            <Shimmer width="60px" height="20px" />
+            <Shimmer width="80px" height="11px" />
+          </div>
+        ))}
+      </div>
+
+      {/* Address */}
+      <div className="mt-3 pt-3 border-t border-border">
+        <Shimmer width="70%" height="13px" />
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const EmployeesSkeleton: React.FC = () => (
+  <div className="space-y-6 pb-20 lg:pb-6">
+    {/* Header */}
+    <div className="flex items-center justify-between">
+      <div className="space-y-2">
+        <Shimmer width="160px" height="32px" />
+        <Shimmer width="200px" height="14px" />
+      </div>
+      <Shimmer width="140px" height="38px" className="rounded-md" />
+    </div>
+
+    {/* Search bar */}
+    <Shimmer width="320px" height="38px" className="rounded-md" />
+
+    {/* Filters row */}
+    <div className="flex flex-wrap items-center gap-4">
+      <Shimmer width="80px" height="13px" />
+      <Shimmer width="130px" height="38px" className="rounded-md" />
+      <Shimmer width="100px" height="38px" className="rounded-md" />
+      <Shimmer width="80px" height="34px" className="rounded-md" />
+    </div>
+
+    {/* Employee cards grid */}
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <EmployeeCardSkeleton key={i} />
+      ))}
+    </div>
+  </div>
+);
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 const Employees: React.FC = () => {
   const {
     employees,
@@ -65,7 +165,7 @@ const Employees: React.FC = () => {
     updateEmployee,
   } = useData();
 
-  const [allTasks, setAllTasks] = useState<any[]>([]);
+  const [allTasks, setAllTasks] = useState<any[] | null>(null);
 
   useEffect(() => {
     api.get("/tasks/stats/employees").then((res) => {
@@ -86,9 +186,6 @@ const Employees: React.FC = () => {
       setAllTasks(flat);
     });
   }, []);
-
-  const formFillingTasks = allTasks.filter(t => t.serviceType === 'form_filling');
-  const xeroxTasks = allTasks.filter(t => t.serviceType === 'xerox');
 
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -129,6 +226,12 @@ const Employees: React.FC = () => {
   const [taskQuickFilter, setTaskQuickFilter] = useState<
     "all" | "daily" | "monthly"
   >("all");
+
+  // Show skeleton while data is loading (after all hooks)
+  if (allTasks === null) return <EmployeesSkeleton />;
+
+  const formFillingTasks = allTasks.filter(t => t.serviceType === 'form_filling');
+  const xeroxTasks = allTasks.filter(t => t.serviceType === 'xerox');
 
   const filteredEmployees = employees.filter(
     (emp) =>
@@ -381,7 +484,7 @@ const Employees: React.FC = () => {
       })),
     ];
 
-    const allTasks = mergedTasks.map((task, index) => ({
+    const allTasksExport = mergedTasks.map((task, index) => ({
       "Serial No": index + 1,
       "Customer Name": task.customerName,
       Phone: task.customerPhone,
@@ -392,7 +495,7 @@ const Employees: React.FC = () => {
       Date: format(new Date(task.createdAt), "dd/MM/yyyy HH:mm"),
     }));
 
-    downloadExcel(allTasks, `${viewingEmployee.name}_tasks`);
+    downloadExcel(allTasksExport, `${viewingEmployee.name}_tasks`);
     toast.success("Tasks exported successfully!");
   };
 
@@ -977,7 +1080,7 @@ const Employees: React.FC = () => {
                   <TableBody>
                     {(() => {
                       const tasks = getEmployeeTasks(viewingEmployee.id);
-                      const allTasks = [
+                      const allTasksInModal = [
                         ...tasks.formFilling.map((t) => ({
                           ...t,
                           type: "form_filling" as const,
@@ -992,7 +1095,7 @@ const Employees: React.FC = () => {
                           new Date(a.createdAt).getTime(),
                       );
 
-                      if (allTasks.length === 0) {
+                      if (allTasksInModal.length === 0) {
                         return (
                           <TableRow>
                             <TableCell
@@ -1005,7 +1108,7 @@ const Employees: React.FC = () => {
                         );
                       }
 
-                      return allTasks.map((task, index) => (
+                      return allTasksInModal.map((task, index) => (
                         <TableRow key={task.id}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>{task.customerName}</TableCell>
