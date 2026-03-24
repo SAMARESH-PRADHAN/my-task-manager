@@ -28,21 +28,23 @@ export async function notifyTaskCompleted(taskId) {
 
     if (!task.customer_phone) return;
 
-    const message = `
+const message = `✅ *Application Submitted Successfully*
+
 Dear ${task.customer_name},
-Greetings and welocome to the Cyber City!
 
-We are happy to inform you that your ${task.board_name || "N/A"} Portal:- ${task.description}
-application registration is submited successfully.
+Greetings from *Cyber City*! We are pleased to inform you that your application has been successfully submitted.
 
-Application Details:
-Application ID: ${task.application_id}
-Password: ${task.application_password}
+📋 *Application Details*
+- Portal: ${task.board_name || "N/A"}
+- Service: ${task.description || "N/A"}
+- Application ID: \`${task.application_id}\`
+- Password: \`${task.application_password}\`
 
-Submited By: ${task.employee_name || "Team"}
+👤 *Submitted By:* ${task.employee_name || "Cyber City Team"}
 
-`;
+For any queries, feel free to contact us.
 
+*Thank you for choosing Cyber City!* `;
     await sendWhatsAppMessage(task.customer_phone, message);
 
     console.log("✅ Completion message sent to", task.customer_phone);

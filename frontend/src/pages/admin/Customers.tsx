@@ -24,7 +24,7 @@ import DateFilter from "@/components/layout/shared/DateFilter";
 import Pagination from "@/components/layout/shared/Pagination";
 import { toast } from "sonner";
 import { downloadExcel } from "@/utils/excel";
-import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { formatToIST } from "@/utils/dateUtils";
 
 const ITEMS_PER_PAGE = 10;
@@ -61,12 +61,7 @@ const Customers: React.FC = () => {
 
       // Date filter
       if (fromDate && toDate) {
-        const customerISTDate = formatToIST(
-          new Date(customer.createdAt),
-          "Asia/Kolkata"
-        );
-
-        const isInRange = isWithinInterval(customerISTDate, {
+        const isInRange = isWithinInterval(new Date(customer.createdAt), {
           start: startOfDay(fromDate),
           end: endOfDay(toDate),
         });

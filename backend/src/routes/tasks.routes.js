@@ -63,6 +63,41 @@ router.get("/", auth, async (req, res) => {
 });
 
 /**
+ * GET ALL PHONES matching current filters (for bulk notifications)
+ * No pagination – returns every unique phone across all pages
+ */
+router.get("/phones", auth, async (req, res) => {
+  try {
+    const search = req.query.search ? `%${req.query.search}%` : null;
+    const fromDate = req.query.from_date ? new Date(req.query.from_date) : null;
+    const toDate = req.query.to_date ? new Date(req.query.to_date) : null;
+    const board = req.query.board && req.query.board !== "all" ? req.query.board : null;
+    const serviceType = req.query.service_type || null;
+    const statusFilter = req.query.status_filter || null; // 'pending' | 'completed'
+
+    const rows = await sql`
+      SELECT DISTINCT c.phone
+      FROM tasks t
+      LEFT JOIN customers c ON c.id = t.customer_id
+      WHERE c.phone IS NOT NULL
+        ${serviceType ? sql`AND t.service_type = ${serviceType}` : sql``}
+        ${search ? sql`AND (c.name ILIKE ${search} OR c.phone ILIKE ${search} OR t.application_id ILIKE ${search} OR t.description ILIKE ${search})` : sql``}
+        ${fromDate ? sql`AND t.created_at >= ${fromDate}` : sql``}
+        ${toDate ? sql`AND t.created_at <= ${toDate}` : sql``}
+        ${board ? sql`AND t.board_name ILIKE ${`%${board}%`}` : sql``}
+        ${statusFilter === "pending" ? sql`AND t.work_status = 'pending'` : sql``}
+        ${statusFilter === "completed" ? sql`AND t.work_status = 'completed'` : sql``}
+    `;
+
+    const phones = rows.map((r) => r.phone).filter(Boolean);
+    res.json({ phones, total: phones.length });
+  } catch (err) {
+    console.error("FETCH PHONES ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/**
  * CREATE TASK
  */
 router.post("/", auth, async (req, res) => {
