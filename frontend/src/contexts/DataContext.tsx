@@ -111,7 +111,7 @@ interface DataContextType {
   updateEmployee: (id: string, updates: Partial<Employee>) => Promise<void>;
 
   refreshAll: () => Promise<void>;
-  fetchTasksFromDB: (page?: number, limit?: number, search?: string, fromDate?: Date, toDate?: Date, board?: string, serviceType?: string) => Promise<void>;
+  fetchTasksFromDB: (page?: number, limit?: number, search?: string, fromDate?: Date, toDate?: Date, board?: string, serviceType?: string, statusFilter?: string) => Promise<void>;
   totalTasks: number;
 }
 
@@ -187,20 +187,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   /* =========================
      FETCH TASKS FROM DB
   ========================= */
-  const fetchTasksFromDB = async (page = 1, limit = 10, search = '', fromDate?: Date, toDate?: Date, board?: string, serviceType?: string) => {
+  const fetchTasksFromDB = async (page = 1, limit = 10, search = '', fromDate?: Date, toDate?: Date, board?: string, serviceType?: string, statusFilter?: string) => {
     const offset = (page - 1) * limit;
     const params = new URLSearchParams();
     params.set('limit', String(limit));
     params.set('offset', String(offset));
     if (search) params.set('search', search);
-    if (fromDate) params.set('from_date', fromDate.toISOString());
-    if (toDate) {
-      const end = new Date(toDate);
-      end.setHours(23, 59, 59, 999);
-      params.set('to_date', end.toISOString());
+    // Only send date params when NOT in pending mode (pending = life-long, no date restriction)
+    if (statusFilter !== 'pending') {
+      if (fromDate) params.set('from_date', fromDate.toISOString());
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setHours(23, 59, 59, 999);
+        params.set('to_date', end.toISOString());
+      }
     }
     if (board && board !== 'all') params.set('board', board);
     if (serviceType) params.set('service_type', serviceType);
+    if (statusFilter && statusFilter !== 'all') params.set('status_filter', statusFilter);
 
     const res = await api.get(`/tasks?${params.toString()}`);
 

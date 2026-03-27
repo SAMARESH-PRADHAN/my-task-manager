@@ -19,6 +19,24 @@ router.get("/", auth, async (req, res) => {
     const toDate = req.query.to_date ? new Date(req.query.to_date) : null;
     const board = req.query.board && req.query.board !== 'all' ? req.query.board : null;
     const serviceType = req.query.service_type || null; // 'form_filling' or 'xerox'
+    const statusFilter = req.query.status_filter || null; // 'pending' | 'completed'
+
+    // When pending filter is active, skip date range so ALL pending tasks show life-long
+    const applyDateFilter = statusFilter !== 'pending';
+
+    // Pending condition:
+    // form_filling: work_status = 'pending' OR payment_status IN ('pending','unpaid')
+    // xerox:        payment_status IN ('pending','unpaid')
+    // no service_type filter: either of the above
+    const pendingCondition = statusFilter === 'pending'
+      ? sql`AND (
+          (t.service_type = 'form_filling' AND (t.work_status = 'pending' OR t.payment_status IN ('pending','unpaid')))
+          OR
+          (t.service_type = 'xerox' AND t.payment_status IN ('pending','unpaid'))
+        )`
+      : statusFilter === 'completed'
+        ? sql`AND t.work_status = 'completed' AND t.payment_status NOT IN ('pending','unpaid')`
+        : sql``;
 
     const [{ count }] = await sql`
       SELECT COUNT(*)::int AS count
@@ -27,9 +45,10 @@ router.get("/", auth, async (req, res) => {
       WHERE 1=1
         ${serviceType ? sql`AND t.service_type = ${serviceType}` : sql``}
         ${search ? sql`AND (c.name ILIKE ${search} OR c.phone ILIKE ${search} OR t.application_id ILIKE ${search} OR t.description ILIKE ${search})` : sql``}
-        ${fromDate ? sql`AND t.created_at >= ${fromDate}` : sql``}
-        ${toDate ? sql`AND t.created_at <= ${toDate}` : sql``}
+        ${applyDateFilter && fromDate ? sql`AND t.created_at >= ${fromDate}` : sql``}
+        ${applyDateFilter && toDate ? sql`AND t.created_at <= ${toDate}` : sql``}
         ${board ? sql`AND t.board_name ILIKE ${`%${board}%`}` : sql``}
+        ${pendingCondition}
     `;
 
     const tasks = await sql`
@@ -48,9 +67,10 @@ router.get("/", auth, async (req, res) => {
       WHERE 1=1
         ${serviceType ? sql`AND t.service_type = ${serviceType}` : sql``}
         ${search ? sql`AND (c.name ILIKE ${search} OR c.phone ILIKE ${search} OR t.application_id ILIKE ${search} OR t.description ILIKE ${search})` : sql``}
-        ${fromDate ? sql`AND t.created_at >= ${fromDate}` : sql``}
-        ${toDate ? sql`AND t.created_at <= ${toDate}` : sql``}
+        ${applyDateFilter && fromDate ? sql`AND t.created_at >= ${fromDate}` : sql``}
+        ${applyDateFilter && toDate ? sql`AND t.created_at <= ${toDate}` : sql``}
         ${board ? sql`AND t.board_name ILIKE ${`%${board}%`}` : sql``}
+        ${pendingCondition}
       ORDER BY t.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
@@ -223,12 +243,19 @@ router.get("/stats/dashboard", auth, async (req, res) => {
         `;
 
     let pendingCount = 0;
+    let pendingOnline = 0;  // form_filling pending
+    let pendingOffline = 0; // xerox pending
     pendingQuery.forEach(t => {
       if (t.service_type === 'form_filling') {
-        if (t.work_status === 'pending') pendingCount++;
-        if (t.payment_status === 'pending' || t.payment_status === 'unpaid') pendingCount++;
+        const isPending =
+          t.work_status === 'pending' ||
+          t.payment_status === 'pending' ||
+          t.payment_status === 'unpaid';
+        if (isPending) { pendingCount++; pendingOnline++; }
       } else if (t.service_type === 'xerox') {
-        if (t.payment_status === 'pending' || t.payment_status === 'unpaid') pendingCount++;
+        if (t.payment_status === 'pending' || t.payment_status === 'unpaid') {
+          pendingCount++; pendingOffline++;
+        }
       }
     });
 
@@ -271,6 +298,8 @@ router.get("/stats/dashboard", auth, async (req, res) => {
       todayXerox: xerox.length,
       todayRevenue,
       pendingCount,
+      pendingOnline,
+      pendingOffline,
       totalCustomers,
       todayCustomers,
       totalTasks,
