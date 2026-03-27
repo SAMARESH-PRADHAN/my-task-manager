@@ -64,7 +64,7 @@ const AllTasksEmployee: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TaskTab>("form_filling");
 
 
-  const fetchMyTasks = async (page = 1, search = '', from?: Date, to?: Date, board?: string, serviceType?: string) => {
+  const fetchMyTasks = async (page = 1, search = '', from?: Date, to?: Date, board?: string, serviceType?: string, status?: string) => {
     try {
       setLoadingTasks(true);
       const offset = (page - 1) * ITEMS_PER_PAGE;
@@ -76,6 +76,7 @@ const AllTasksEmployee: React.FC = () => {
       if (to) { const e = new Date(to); e.setHours(23,59,59,999); params.set('to_date', e.toISOString()); }
       if (board && board !== '' && board !== 'all') params.set('board', board);
       if (serviceType) params.set('service_type', serviceType);
+      if (status && status !== 'all') params.set('status_filter', status);
 
       const res = await api.get(`/tasks?${params.toString()}`);
 
@@ -152,17 +153,16 @@ const AllTasksEmployee: React.FC = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-
- useEffect(() => {
-  fetchMyTasks(currentPage, searchQuery, fromDate, toDate, boardFilter, activeTab);
-}, [currentPage, activeTab]);
-
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [boardFilter, setBoardFilter] = useState("");
   const [boards, setBoards] = useState<string[]>([]);
   const [fromDate, setFromDate] = useState<Date | undefined>();
   const [toDate, setToDate] = useState<Date | undefined>();
+
+  useEffect(() => {
+    fetchMyTasks(currentPage, searchQuery, fromDate, toDate, boardFilter, activeTab, statusFilter);
+  }, [currentPage, activeTab, statusFilter]);
 
   const [isUpdatingFormTask, setIsUpdatingFormTask] = useState(false);
   const [isUpdatingXeroxTask, setIsUpdatingXeroxTask] = useState(false);
@@ -176,9 +176,9 @@ const AllTasksEmployee: React.FC = () => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
       setCurrentPage(1);
-      fetchMyTasks(1, searchQuery, fromDate, toDate, boardFilter, activeTab);
+      fetchMyTasks(1, searchQuery, fromDate, toDate, boardFilter, activeTab, statusFilter);
     }, 400);
-  }, [searchQuery, fromDate, toDate, boardFilter]);
+  }, [searchQuery, fromDate, toDate, boardFilter, statusFilter]);
   const fetchBoards = async (serviceType?: string) => {
     try {
       const url = serviceType
@@ -206,8 +206,12 @@ const AllTasksEmployee: React.FC = () => {
   const filteredFormFillingTasks = useMemo(() => {
     return formFillingTasks.filter((task) => {
       // Status filter
-      if (statusFilter !== "all" && task.workStatus !== statusFilter)
-        return false;
+      if (statusFilter === "pending") {
+        const isPending = task.workStatus === "pending" || task.paymentStatus === "pending";
+        if (!isPending) return false;
+      } else if (statusFilter === "completed") {
+        if (task.workStatus !== "completed") return false;
+      }
 
       // Search filter
       const matchesSearch =

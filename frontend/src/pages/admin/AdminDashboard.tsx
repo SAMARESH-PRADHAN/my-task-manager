@@ -197,6 +197,8 @@ const AdminDashboard: React.FC = () => {
 
   const todayRevenue = stats?.todayRevenue ?? 0;
   const totalPendingTasks = stats?.pendingCount ?? 0;
+  const pendingOnline = stats?.pendingOnline ?? 0;
+  const pendingOffline = stats?.pendingOffline ?? 0;
   const totalCustomers = stats?.totalCustomers ?? 0;
   const jobSeekerCount = stats?.serviceBreakdown?.job_seeker ?? 0;
   const studentCount = stats?.serviceBreakdown?.student ?? 0;
@@ -247,12 +249,31 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Pending Tasks"
-          value={totalPendingTasks}
-          icon={Clock}
-          iconClassName="bg-warning"
-        />
+        {/* Pending Tasks Card with online/offline breakdown */}
+        <div className="rounded-xl border bg-card p-5 shadow-card flex flex-col gap-3">
+          <div className="flex items-center gap-4">
+            <div className="bg-warning p-3 rounded-lg flex-shrink-0">
+              <Clock className="h-5 w-5 text-warning-foreground" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Pending Tasks</p>
+              <p className="text-2xl font-bold text-foreground">{totalPendingTasks}</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-2 border-t pt-2">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-chart-1 inline-block" />
+              <span className="text-xs text-muted-foreground">Online</span>
+              <span className="text-xs font-semibold text-foreground">{pendingOnline}</span>
+            </div>
+            <div className="w-px h-3 bg-border" />
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-chart-4 inline-block" />
+              <span className="text-xs text-muted-foreground">Offline</span>
+              <span className="text-xs font-semibold text-foreground">{pendingOffline}</span>
+            </div>
+          </div>
+        </div>
         <StatCard
           title="Today's Tasks"
           value={todayFormFillingCount + todayXeroxCount}

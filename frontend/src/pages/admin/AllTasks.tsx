@@ -146,8 +146,14 @@ const AllTasks: React.FC = () => {
           .includes(boardFilter.toLowerCase())
       )
         return false;
-      if (statusFilter !== "all" && task.workStatus !== statusFilter)
-        return false;
+      if (statusFilter === "pending") {
+        const isPending =
+          task.workStatus === "pending" ||
+          task.paymentStatus === "pending";
+        if (!isPending) return false;
+      } else if (statusFilter === "completed") {
+        if (task.workStatus !== "completed") return false;
+      }
 
       const matchesSearch =
         (task.customerName ?? "")
@@ -160,7 +166,8 @@ const AllTasks: React.FC = () => {
 
       if (!matchesSearch) return false;
 
-      if (fromDate && toDate) {
+      // Life-long pending: skip date filter when pending tab is active
+      if (statusFilter !== "pending" && fromDate && toDate) {
         const isInRange = isWithinInterval(new Date(task.createdAt), {
           start: startOfDay(fromDate),
           end: endOfDay(toDate),
@@ -181,8 +188,13 @@ const AllTasks: React.FC = () => {
 
   const filteredXeroxTasks = useMemo(() => {
     return xeroxTasks.filter((task) => {
-      if (statusFilter !== "all" && task.paymentStatus !== statusFilter)
-        return false;
+      if (statusFilter === "pending") {
+        const isPending =
+          task.paymentStatus === "pending";
+        if (!isPending) return false;
+      } else if (statusFilter === "completed") {
+        if (task.paymentStatus === "completed") return false;
+      }
 
       const matchesSearch =
         task.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -192,7 +204,8 @@ const AllTasks: React.FC = () => {
           .includes(searchQuery.toLowerCase());
       if (!matchesSearch) return false;
 
-      if (fromDate && toDate) {
+      // Life-long pending: skip date filter when pending tab is active
+      if (statusFilter !== "pending" && fromDate && toDate) {
         const isInRange = isWithinInterval(new Date(task.createdAt), {
           start: startOfDay(fromDate),
           end: endOfDay(toDate),
@@ -222,7 +235,7 @@ const AllTasks: React.FC = () => {
       return;
     }
     setIsFetching(true);
-    fetchTasksFromDB(currentPage, ITEMS_PER_PAGE, searchQuery, fromDate, toDate, boardFilter, activeTab)
+    fetchTasksFromDB(currentPage, ITEMS_PER_PAGE, searchQuery, fromDate, toDate, boardFilter, activeTab, statusFilter)
       .finally(() => setIsFetching(false));
   }, [currentPage]);
 
@@ -233,11 +246,11 @@ const AllTasks: React.FC = () => {
     setIsFetching(true);
     searchTimeoutRef.current = setTimeout(async () => {
       setCurrentPage(1);
-      await fetchTasksFromDB(1, ITEMS_PER_PAGE, searchQuery, fromDate, toDate, boardFilter, activeTab);
+      await fetchTasksFromDB(1, ITEMS_PER_PAGE, searchQuery, fromDate, toDate, boardFilter, activeTab, statusFilter);
       setIsSearching(false);
       setIsFetching(false);
     }, 400);
-  }, [searchQuery, fromDate, toDate, boardFilter, activeTab]);
+  }, [searchQuery, fromDate, toDate, boardFilter, activeTab, statusFilter]);
   const boardsCache = useRef<{ [key: string]: any[] }>({});
   const skipNextFetch = useRef(false);
 
