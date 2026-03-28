@@ -212,8 +212,23 @@ router.get("/stats/dashboard", auth, async (req, res) => {
     const isAdmin = req.user.role === "admin";
     const employeeId = req.user.id;
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    // const todayStart = new Date();
+    // todayStart.setHours(0, 0, 0, 0);
+    // Convert to IST midnight
+const now = new Date();
+
+const istOffset = 5.5 * 60 * 60 * 1000;
+
+const istNow = new Date(now.getTime() + istOffset);
+
+const istStartOfDay = new Date(
+  istNow.getFullYear(),
+  istNow.getMonth(),
+  istNow.getDate()
+);
+
+// Convert IST midnight back to UTC
+const todayStart = new Date(istStartOfDay.getTime() - istOffset);
 
     // Admin sees all tasks, employee sees only their own
     const tasks = isAdmin
