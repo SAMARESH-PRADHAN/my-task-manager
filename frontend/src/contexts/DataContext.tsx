@@ -43,6 +43,7 @@ export interface FormFillingTask {
   completedByName?: string; // ✅ NEW
   screenshotUrl?: string;
   createdAt: string;
+  completedAt?: string;
 }
 
 export interface XeroxTask {
@@ -62,6 +63,7 @@ export interface XeroxTask {
   completedById?: string; // ✅ NEW
   completedByName?: string; // ✅ NEW
   createdAt: string;
+  completedAt?: string;
 }
 
 export interface Employee {
@@ -243,6 +245,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           completedByName: t.completed_by_name ?? undefined, // ✅ NEW
           screenshotUrl: t.screenshot_url,
           createdAt: t.created_at,
+          completedAt: t.completed_at,
         });
       } else if (t.service_type === "xerox") {
         xx.push({
@@ -265,6 +268,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           completedById: t.completed_by ? String(t.completed_by) : undefined, // ✅ NEW
           completedByName: t.completed_by_name ?? undefined, // ✅ NEW
           createdAt: t.created_at,
+          completedAt: t.completed_at,
         });
       }
     });

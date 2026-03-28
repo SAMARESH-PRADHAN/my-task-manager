@@ -128,8 +128,14 @@ const AllTasks: React.FC = () => {
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [sendingNotification, setSendingNotification] = useState(false);
-  const [notifyStep, setNotifyStep] = useState<"compose" | "sending" | "done">("compose");
-  const [notifyProgress, setNotifyProgress] = useState({ sent: 0, failed: 0, total: 0 });
+  const [notifyStep, setNotifyStep] = useState<"compose" | "sending" | "done">(
+    "compose",
+  );
+  const [notifyProgress, setNotifyProgress] = useState({
+    sent: 0,
+    failed: 0,
+    total: 0,
+  });
   const [notifyFailedNumbers, setNotifyFailedNumbers] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -148,8 +154,7 @@ const AllTasks: React.FC = () => {
         return false;
       if (statusFilter === "pending") {
         const isPending =
-          task.workStatus === "pending" ||
-          task.paymentStatus === "pending";
+          task.workStatus === "pending" || task.paymentStatus === "pending";
         if (!isPending) return false;
       } else if (statusFilter === "completed") {
         if (task.workStatus !== "completed") return false;
@@ -189,8 +194,7 @@ const AllTasks: React.FC = () => {
   const filteredXeroxTasks = useMemo(() => {
     return xeroxTasks.filter((task) => {
       if (statusFilter === "pending") {
-        const isPending =
-          task.paymentStatus === "pending";
+        const isPending = task.paymentStatus === "pending";
         if (!isPending) return false;
       } else if (statusFilter === "completed") {
         if (task.paymentStatus === "completed") return false;
@@ -235,8 +239,16 @@ const AllTasks: React.FC = () => {
       return;
     }
     setIsFetching(true);
-    fetchTasksFromDB(currentPage, ITEMS_PER_PAGE, searchQuery, fromDate, toDate, boardFilter, activeTab, statusFilter)
-      .finally(() => setIsFetching(false));
+    fetchTasksFromDB(
+      currentPage,
+      ITEMS_PER_PAGE,
+      searchQuery,
+      fromDate,
+      toDate,
+      boardFilter,
+      activeTab,
+      statusFilter,
+    ).finally(() => setIsFetching(false));
   }, [currentPage]);
 
   // Refetch when any filter or tab changes
@@ -246,7 +258,16 @@ const AllTasks: React.FC = () => {
     setIsFetching(true);
     searchTimeoutRef.current = setTimeout(async () => {
       setCurrentPage(1);
-      await fetchTasksFromDB(1, ITEMS_PER_PAGE, searchQuery, fromDate, toDate, boardFilter, activeTab, statusFilter);
+      await fetchTasksFromDB(
+        1,
+        ITEMS_PER_PAGE,
+        searchQuery,
+        fromDate,
+        toDate,
+        boardFilter,
+        activeTab,
+        statusFilter,
+      );
       setIsSearching(false);
       setIsFetching(false);
     }, 400);
@@ -281,76 +302,118 @@ const AllTasks: React.FC = () => {
     if (isDownloading) return;
     setIsDownloading(true);
     try {
-    if (activeTab === "form_filling") {
-      const dlParams = new URLSearchParams({ limit: '10000', offset: '0', service_type: 'form_filling' });
-      if (searchQuery) dlParams.set('search', searchQuery);
-      if (fromDate) dlParams.set('from_date', fromDate.toISOString());
-      if (toDate) { const e = new Date(toDate); e.setHours(23,59,59,999); dlParams.set('to_date', e.toISOString()); }
-      if (boardFilter && boardFilter !== 'all') dlParams.set('board', boardFilter);
-      const res = await api.get(`/tasks?${dlParams.toString()}`);
-      const allFF = res.data.tasks
-        .filter((t: any) => t.service_type === 'form_filling')
-        .filter((t: any) => {
-          if (!searchQuery) return true;
-          const q = searchQuery.toLowerCase();
-          return (t.customer_name ?? '').toLowerCase().includes(q) ||
-            (t.customer_phone ?? '').includes(searchQuery) ||
-            (t.application_id ?? '').toLowerCase().includes(q);
+      if (activeTab === "form_filling") {
+        const dlParams = new URLSearchParams({
+          limit: "10000",
+          offset: "0",
+          service_type: "form_filling",
         });
-      const data = allFF.map((task: any, index: number) => ({
-        "Serial No": index + 1,
-        "Customer Name": task.customer_name ?? task.customerName ?? "",
-        Phone: task.customer_phone ?? task.customerPhone ?? "",
-        Email: task.customer_email ?? task.customerEmail ?? "",
-        "Service Type": (task.form_service_type ?? task.serviceType ?? "unknown").replace(/_/g, " "),
-        Board: task.board_name ?? task.boardName ?? "-",
-        "Assigned To": task.employee_name ?? task.employeeName ?? "",
-        "Completed By": task.completed_by_name ?? task.completedByName ?? task.employee_name ?? task.employeeName ?? "",
-        "Application ID": task.application_id ?? task.applicationId ?? "",
-        Password: task.application_password ?? task.password ?? "",
-        "Total Amount": task.total_amount ?? task.amount ?? 0,
-        Deduction: task.deduction_amount ?? task.deductionAmount ?? 0,
-        Revenue: task.revenue ?? 0,
-        "Work Status": task.work_status ?? task.workStatus ?? "",
-        "Payment Status": task.payment_status ?? task.paymentStatus ?? "",
-        "Payment Mode": task.payment_mode ?? task.paymentMode ?? "",
-        Description: (task.description ?? "").replace(/\n/g, " "),
-        Date: formatToIST(task.created_at ?? task.createdAt, "dd/MM/yyyy HH:mm"),
-      }));
-      downloadExcel(data, "online_tasks");
-    } else {
-      const dlParams2 = new URLSearchParams({ limit: '10000', offset: '0', service_type: 'xerox' });
-      if (searchQuery) dlParams2.set('search', searchQuery);
-      if (fromDate) dlParams2.set('from_date', fromDate.toISOString());
-      if (toDate) { const e2 = new Date(toDate); e2.setHours(23,59,59,999); dlParams2.set('to_date', e2.toISOString()); }
-      if (boardFilter && boardFilter !== 'all') dlParams2.set('board', boardFilter);
-      const res2 = await api.get(`/tasks?${dlParams2.toString()}`);
-      const allXX = res2.data.tasks
-        .filter((t: any) => t.service_type === 'xerox')
-        .filter((t: any) => {
-          if (!searchQuery) return true;
-          const q = searchQuery.toLowerCase();
-          return (t.customer_name ?? '').toLowerCase().includes(q) ||
-            (t.customer_phone ?? '').includes(searchQuery) ||
-            (t.description ?? '').toLowerCase().includes(q);
+        if (searchQuery) dlParams.set("search", searchQuery);
+        if (fromDate) dlParams.set("from_date", fromDate.toISOString());
+        if (toDate) {
+          const e = new Date(toDate);
+          e.setHours(23, 59, 59, 999);
+          dlParams.set("to_date", e.toISOString());
+        }
+        if (boardFilter && boardFilter !== "all")
+          dlParams.set("board", boardFilter);
+        const res = await api.get(`/tasks?${dlParams.toString()}`);
+        const allFF = res.data.tasks
+          .filter((t: any) => t.service_type === "form_filling")
+          .filter((t: any) => {
+            if (!searchQuery) return true;
+            const q = searchQuery.toLowerCase();
+            return (
+              (t.customer_name ?? "").toLowerCase().includes(q) ||
+              (t.customer_phone ?? "").includes(searchQuery) ||
+              (t.application_id ?? "").toLowerCase().includes(q)
+            );
+          });
+        const data = allFF.map((task: any, index: number) => ({
+          "Serial No": index + 1,
+          "Customer Name": task.customer_name ?? task.customerName ?? "",
+          Phone: task.customer_phone ?? task.customerPhone ?? "",
+          Email: task.customer_email ?? task.customerEmail ?? "",
+          "Service Type": (
+            task.form_service_type ??
+            task.serviceType ??
+            "unknown"
+          ).replace(/_/g, " "),
+          Board: task.board_name ?? task.boardName ?? "-",
+          "Assigned To": task.employee_name ?? task.employeeName ?? "",
+          "Completed By":
+            task.completed_by_name ??
+            task.completedByName ??
+            task.employee_name ??
+            task.employeeName ??
+            "",
+          "Application ID": task.application_id ?? task.applicationId ?? "",
+          Password: task.application_password ?? task.password ?? "",
+          "Total Amount": task.total_amount ?? task.amount ?? 0,
+          Deduction: task.deduction_amount ?? task.deductionAmount ?? 0,
+          Revenue: task.revenue ?? 0,
+          "Work Status": task.work_status ?? task.workStatus ?? "",
+          "Payment Status": task.payment_status ?? task.paymentStatus ?? "",
+          "Payment Mode": task.payment_mode ?? task.paymentMode ?? "",
+          Description: (task.description ?? "").replace(/\n/g, " "),
+          Date: formatToIST(
+            task.created_at ?? task.createdAt,
+            "dd/MM/yyyy HH:mm",
+          ),
+        }));
+        downloadExcel(data, "online_tasks");
+      } else {
+        const dlParams2 = new URLSearchParams({
+          limit: "10000",
+          offset: "0",
+          service_type: "xerox",
         });
-      const data = allXX.map((task: any, index: number) => ({
-        "Serial No": index + 1,
-        "Customer Name": task.customer_name ?? task.customerName ?? "",
-        Phone: task.customer_phone ?? task.customerPhone ?? "",
-        Email: task.customer_email ?? task.customerEmail ?? "",
-        "Assigned To": task.employee_name ?? task.employeeName ?? "",
-        "Completed By": task.completed_by_name ?? task.completedByName ?? task.employee_name ?? task.employeeName ?? "",
-        "Total Amount": task.total_amount ?? task.amount ?? 0,
-        Deduction: task.deduction_amount ?? task.deductionAmount ?? 0,
-        Revenue: task.revenue ?? 0,
-        "Payment Status": task.payment_status ?? task.paymentStatus ?? "",
-        "Payment Mode": task.payment_mode ?? task.paymentMode ?? "",
-        Description: (task.description ?? "").replace(/\n/g, " "),
-        Date: formatToIST(task.created_at ?? task.createdAt, "dd/MM/yyyy HH:mm"),
-      }));
-      downloadExcel(data, "xerox_tasks");
-    }
+        if (searchQuery) dlParams2.set("search", searchQuery);
+        if (fromDate) dlParams2.set("from_date", fromDate.toISOString());
+        if (toDate) {
+          const e2 = new Date(toDate);
+          e2.setHours(23, 59, 59, 999);
+          dlParams2.set("to_date", e2.toISOString());
+        }
+        if (boardFilter && boardFilter !== "all")
+          dlParams2.set("board", boardFilter);
+        const res2 = await api.get(`/tasks?${dlParams2.toString()}`);
+        const allXX = res2.data.tasks
+          .filter((t: any) => t.service_type === "xerox")
+          .filter((t: any) => {
+            if (!searchQuery) return true;
+            const q = searchQuery.toLowerCase();
+            return (
+              (t.customer_name ?? "").toLowerCase().includes(q) ||
+              (t.customer_phone ?? "").includes(searchQuery) ||
+              (t.description ?? "").toLowerCase().includes(q)
+            );
+          });
+        const data = allXX.map((task: any, index: number) => ({
+          "Serial No": index + 1,
+          "Customer Name": task.customer_name ?? task.customerName ?? "",
+          Phone: task.customer_phone ?? task.customerPhone ?? "",
+          Email: task.customer_email ?? task.customerEmail ?? "",
+          "Assigned To": task.employee_name ?? task.employeeName ?? "",
+          "Completed By":
+            task.completed_by_name ??
+            task.completedByName ??
+            task.employee_name ??
+            task.employeeName ??
+            "",
+          "Total Amount": task.total_amount ?? task.amount ?? 0,
+          Deduction: task.deduction_amount ?? task.deductionAmount ?? 0,
+          Revenue: task.revenue ?? 0,
+          "Payment Status": task.payment_status ?? task.paymentStatus ?? "",
+          "Payment Mode": task.payment_mode ?? task.paymentMode ?? "",
+          Description: (task.description ?? "").replace(/\n/g, " "),
+          Date: formatToIST(
+            task.created_at ?? task.createdAt,
+            "dd/MM/yyyy HH:mm",
+          ),
+        }));
+        downloadExcel(data, "xerox_tasks");
+      }
       toast.success("Tasks exported successfully!");
     } catch (err) {
       toast.error("Failed to export tasks");
@@ -360,7 +423,9 @@ const AllTasks: React.FC = () => {
   };
 
   // Total recipient count for the notification modal (fetched from backend)
-  const [notifyRecipientCount, setNotifyRecipientCount] = useState<number | null>(null);
+  const [notifyRecipientCount, setNotifyRecipientCount] = useState<
+    number | null
+  >(null);
 
   // Fetch recipient count whenever the notify modal opens or filters change
   useEffect(() => {
@@ -372,8 +437,13 @@ const AllTasks: React.FC = () => {
         params.set("service_type", activeTab);
         if (searchQuery) params.set("search", searchQuery);
         if (fromDate) params.set("from_date", fromDate.toISOString());
-        if (toDate) { const e = new Date(toDate); e.setHours(23, 59, 59, 999); params.set("to_date", e.toISOString()); }
-        if (boardFilter && boardFilter !== "all") params.set("board", boardFilter);
+        if (toDate) {
+          const e = new Date(toDate);
+          e.setHours(23, 59, 59, 999);
+          params.set("to_date", e.toISOString());
+        }
+        if (boardFilter && boardFilter !== "all")
+          params.set("board", boardFilter);
         if (statusFilter !== "all") params.set("status_filter", statusFilter);
         const res = await api.get(`/tasks/phones?${params.toString()}`);
         if (!cancelled) setNotifyRecipientCount(res.data.total);
@@ -382,8 +452,18 @@ const AllTasks: React.FC = () => {
       }
     };
     fetchCount();
-    return () => { cancelled = true; };
-  }, [isNotifyModalOpen, activeTab, searchQuery, fromDate, toDate, boardFilter, statusFilter]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isNotifyModalOpen,
+    activeTab,
+    searchQuery,
+    fromDate,
+    toDate,
+    boardFilter,
+    statusFilter,
+  ]);
 
   // Open modal with clean state
   const openNotifyModal = () => {
@@ -407,7 +487,11 @@ const AllTasks: React.FC = () => {
     params.set("service_type", activeTab);
     if (searchQuery) params.set("search", searchQuery);
     if (fromDate) params.set("from_date", fromDate.toISOString());
-    if (toDate) { const e = new Date(toDate); e.setHours(23, 59, 59, 999); params.set("to_date", e.toISOString()); }
+    if (toDate) {
+      const e = new Date(toDate);
+      e.setHours(23, 59, 59, 999);
+      params.set("to_date", e.toISOString());
+    }
     if (boardFilter && boardFilter !== "all") params.set("board", boardFilter);
     if (statusFilter !== "all") params.set("status_filter", statusFilter);
 
@@ -440,7 +524,10 @@ const AllTasks: React.FC = () => {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ message: notificationMessage, phones: uniquePhones }),
+        body: JSON.stringify({
+          message: notificationMessage,
+          phones: uniquePhones,
+        }),
       });
 
       if (!response.ok || !response.body) {
@@ -464,9 +551,17 @@ const AllTasks: React.FC = () => {
           try {
             const event = JSON.parse(line.slice(5).trim());
             if (event.type === "progress") {
-              setNotifyProgress({ sent: event.sent, failed: event.failed, total: event.total });
+              setNotifyProgress({
+                sent: event.sent,
+                failed: event.failed,
+                total: event.total,
+              });
             } else if (event.type === "done") {
-              setNotifyProgress({ sent: event.sent, failed: event.failed, total: event.total });
+              setNotifyProgress({
+                sent: event.sent,
+                failed: event.failed,
+                total: event.total,
+              });
               setNotifyFailedNumbers(event.failedNumbers ?? []);
               setNotifyStep("done");
             } else if (event.type === "error") {
@@ -599,9 +694,14 @@ const AllTasks: React.FC = () => {
               : ""
           }
         >
-          {activeTab === "form_filling" && isFetching
-            ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Loading...</>
-            : "Online Service"}
+          {activeTab === "form_filling" && isFetching ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Loading...
+            </>
+          ) : (
+            "Online Service"
+          )}
         </Button>
         <Button
           variant={activeTab === "xerox" ? "default" : "outline"}
@@ -616,9 +716,14 @@ const AllTasks: React.FC = () => {
               : ""
           }
         >
-          {activeTab === "xerox" && isFetching
-            ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Loading...</>
-            : "Offline Service"}
+          {activeTab === "xerox" && isFetching ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Loading...
+            </>
+          ) : (
+            "Offline Service"
+          )}
         </Button>
       </div>
 
@@ -681,7 +786,11 @@ const AllTasks: React.FC = () => {
             onToDateChange={setToDate}
           />
         </div>
-        <Button onClick={handleDownload} variant="outline" disabled={isDownloading}>
+        <Button
+          onClick={handleDownload}
+          variant="outline"
+          disabled={isDownloading}
+        >
           <Download className="h-4 w-4 mr-2" />
           {isDownloading ? "Downloading..." : "Download Excel"}
         </Button>
@@ -695,7 +804,10 @@ const AllTasks: React.FC = () => {
         </Button>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           {isFetching ? (
-            <><Loader2 className="h-4 w-4 animate-spin" /><span>Searching...</span></>
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Searching...</span>
+            </>
           ) : (
             <span>
               {totalTasks > 0
@@ -861,7 +973,10 @@ const AllTasks: React.FC = () => {
                           ₹{task.revenue || task.amount}
                         </TableCell>
                         <TableCell>
-                          {formatToIST(task.createdAt, "dd/MM/yyyy HH:mm")}
+                          {formatToIST(
+                            new Date(task.completedAt || task.createdAt),
+                            "dd MMM yyyy hh:mm a",
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
@@ -976,7 +1091,10 @@ const AllTasks: React.FC = () => {
                           {task.description || "-"}
                         </TableCell>
                         <TableCell>
-                          {formatToIST(task.createdAt, "dd/MM/yyyy HH:mm")}
+                          {formatToIST(
+                            new Date(task.completedAt || task.createdAt),
+                            "dd MMM yyyy hh:mm a",
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
@@ -1573,14 +1691,18 @@ const AllTasks: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Notification Message</Label>
-                  <span className={`text-xs ${notificationMessage.length > 900 ? "text-destructive" : "text-muted-foreground"}`}>
+                  <span
+                    className={`text-xs ${notificationMessage.length > 900 ? "text-destructive" : "text-muted-foreground"}`}
+                  >
                     {notificationMessage.length} / 1000
                   </span>
                 </div>
                 <Textarea
                   placeholder="Type your notification message..."
                   value={notificationMessage}
-                  onChange={(e) => setNotificationMessage(e.target.value.slice(0, 1000))}
+                  onChange={(e) =>
+                    setNotificationMessage(e.target.value.slice(0, 1000))
+                  }
                   rows={4}
                 />
               </div>
@@ -1596,19 +1718,29 @@ const AllTasks: React.FC = () => {
                 </button>
                 {showPreview && (
                   <div className="mt-2 rounded-xl border border-border bg-muted/40 p-3">
-                    <p className="text-xs text-muted-foreground mb-2 font-medium">WhatsApp Preview</p>
+                    <p className="text-xs text-muted-foreground mb-2 font-medium">
+                      WhatsApp Preview
+                    </p>
                     <div className="flex justify-end">
                       <div
                         className="max-w-[85%] rounded-tl-2xl rounded-tr-sm rounded-b-2xl px-4 py-2 text-sm shadow"
                         style={{ backgroundColor: "#dcf8c6", color: "#111" }}
                       >
                         {notificationMessage.trim() ? (
-                          <p className="whitespace-pre-wrap break-words">{notificationMessage}</p>
+                          <p className="whitespace-pre-wrap break-words">
+                            {notificationMessage}
+                          </p>
                         ) : (
-                          <p className="italic opacity-40">Your message will appear here...</p>
+                          <p className="italic opacity-40">
+                            Your message will appear here...
+                          </p>
                         )}
                         <p className="text-right text-xs mt-1 opacity-60">
-                          {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ✓✓
+                          {new Date().toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}{" "}
+                          ✓✓
                         </p>
                       </div>
                     </div>
@@ -1618,7 +1750,9 @@ const AllTasks: React.FC = () => {
 
               <div className="text-sm text-primary font-medium">
                 Recipients:{" "}
-                {notifyRecipientCount === null ? "Loading..." : `${notifyRecipientCount} customers`}
+                {notifyRecipientCount === null
+                  ? "Loading..."
+                  : `${notifyRecipientCount} customers`}
                 {boardFilter !== "all" && (
                   <span className="ml-1 text-muted-foreground font-normal">
                     (board &ldquo;{boardFilter}&rdquo;)
@@ -1632,7 +1766,10 @@ const AllTasks: React.FC = () => {
               </div>
 
               <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setIsNotifyModalOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsNotifyModalOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button
@@ -1657,10 +1794,19 @@ const AllTasks: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm font-medium">
                   <span>
-                    {notifyProgress.sent + notifyProgress.failed} / {notifyProgress.total}
+                    {notifyProgress.sent + notifyProgress.failed} /{" "}
+                    {notifyProgress.total}
                   </span>
                   <span className="text-muted-foreground">
-                    ~{Math.ceil(((notifyProgress.total - notifyProgress.sent - notifyProgress.failed) * 1.5) / 60)} min left
+                    ~
+                    {Math.ceil(
+                      ((notifyProgress.total -
+                        notifyProgress.sent -
+                        notifyProgress.failed) *
+                        1.5) /
+                        60,
+                    )}{" "}
+                    min left
                   </span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
@@ -1679,11 +1825,15 @@ const AllTasks: React.FC = () => {
               {/* Counters */}
               <div className="flex justify-center gap-8 text-sm">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-green-500">{notifyProgress.sent}</p>
+                  <p className="text-2xl font-bold text-green-500">
+                    {notifyProgress.sent}
+                  </p>
                   <p className="text-muted-foreground">Delivered</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-destructive">{notifyProgress.failed}</p>
+                  <p className="text-2xl font-bold text-destructive">
+                    {notifyProgress.failed}
+                  </p>
                   <p className="text-muted-foreground">Failed</p>
                 </div>
               </div>
@@ -1699,15 +1849,26 @@ const AllTasks: React.FC = () => {
             <div className="space-y-5 py-2 text-center">
               <div className="flex justify-center">
                 <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-                  <svg className="w-9 h-9 text-green-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-9 h-9 text-green-500"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 </div>
               </div>
 
               <div>
                 <p className="text-xl font-bold">
-                  {notifyProgress.sent} message{notifyProgress.sent !== 1 ? "s" : ""} sent!
+                  {notifyProgress.sent} message
+                  {notifyProgress.sent !== 1 ? "s" : ""} sent!
                 </p>
                 {notifyProgress.failed > 0 && (
                   <p className="text-sm text-destructive mt-1">
@@ -1718,9 +1879,13 @@ const AllTasks: React.FC = () => {
 
               {notifyFailedNumbers.length > 0 && (
                 <div className="text-left bg-muted rounded-lg p-3 space-y-1 max-h-32 overflow-y-auto">
-                  <p className="text-xs font-semibold text-muted-foreground mb-1">Failed numbers:</p>
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">
+                    Failed numbers:
+                  </p>
                   {notifyFailedNumbers.map((n) => (
-                    <p key={n} className="text-xs text-destructive font-mono">{n}</p>
+                    <p key={n} className="text-xs text-destructive font-mono">
+                      {n}
+                    </p>
                   ))}
                 </div>
               )}
