@@ -4,11 +4,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import Navbar from './Navbar';
 import AdminSidebar from './AdminSidebar';
 import MobileNav from './MobileNav';
+import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 
 const AdminLayout: React.FC = () => {
   const { user, isAuthenticated, loading } = useAuth();
 
-  // ⏳ wait until auth is restored
+  useInactivityLogout();
+
   if (loading) return null;
 
   if (!isAuthenticated) {
@@ -19,23 +21,18 @@ const AdminLayout: React.FC = () => {
     return <Navigate to="/employee/dashboard" replace />;
   }
 
- return (
+  return (
     <div className="h-screen flex flex-col bg-background">
-      {/* Navbar fixed */}
       <Navbar />
-
-      {/* Sidebar + Content */}
       <div className="flex flex-1 overflow-hidden">
         <AdminSidebar />
-
-        {/* ONLY this scrolls */}
         <main className="flex-1 p-6 overflow-y-auto">
           <Outlet />
         </main>
       </div>
-
       <MobileNav role="admin" />
     </div>
   );
 };
+
 export default AdminLayout;
