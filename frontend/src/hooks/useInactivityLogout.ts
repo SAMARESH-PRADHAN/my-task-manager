@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
-const INACTIVITY_TIMEOUT = 10 * 1000; // 5 minutes
+const INACTIVITY_TIMEOUT =  20 * 60 * 1000; // 20 minutes
 
 export const useInactivityLogout = () => {
   const { logout, isAuthenticated } = useAuth();
