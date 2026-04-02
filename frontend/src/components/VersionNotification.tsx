@@ -1,23 +1,25 @@
 import { useEffect, useState } from "react";
-import { X, Telescope, ArrowRight } from "lucide-react";
+import { X, Wrench, ArrowRight } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+
+const NOTIF_KEY = "version_notification_time_v2";
+const DURATION = 60000;
 
 export default function VersionNotification() {
   const { theme } = useTheme();
   const [show, setShow] = useState(false);
   const [progress, setProgress] = useState(100);
-  const DURATION = 60000; // 1 minute
 
   useEffect(() => {
-    const lastShown = localStorage.getItem("version_notification_time");
+    if (typeof window === "undefined") return;
+
+    const lastShown = localStorage.getItem(NOTIF_KEY);
     const now = Date.now();
     const twentyFourHours = 24 * 60 * 60 * 1000;
 
-    if (!lastShown || now - Number(lastShown) < twentyFourHours) {
+    if (!lastShown || now - Number(lastShown) > twentyFourHours) {
       setShow(true);
-      if (!lastShown) {
-        localStorage.setItem("version_notification_time", now.toString());
-      }
+      localStorage.setItem(NOTIF_KEY, now.toString());
 
       const interval = setInterval(() => {
         setProgress((prev) => {
@@ -106,7 +108,7 @@ export default function VersionNotification() {
             className="absolute top-0 left-0 right-0 h-px"
             style={{
               background:
-                "linear-gradient(90deg, transparent, rgba(103,232,249,0.7), rgba(251,146,60,0.5), transparent)",
+                "linear-gradient(90deg, transparent, rgba(103,232,249,0.7), rgba(167,139,250,0.5), transparent)",
             }}
           />
 
@@ -128,17 +130,17 @@ export default function VersionNotification() {
                 <div className="relative flex-shrink-0">
                   <div
                     className="pulse-ring absolute inset-0 rounded-xl"
-                    style={{ background: "rgba(251,146,60,0.2)" }}
+                    style={{ background: "rgba(34,211,238,0.2)" }}
                   />
                   <div
                     className="relative w-10 h-10 rounded-xl flex items-center justify-center"
                     style={{
                       background:
-                        "linear-gradient(135deg, rgba(251,146,60,0.2), rgba(253,186,116,0.1))",
-                      border: "1px solid rgba(251,146,60,0.35)",
+                        "linear-gradient(135deg, rgba(34,211,238,0.2), rgba(103,232,249,0.1))",
+                      border: "1px solid rgba(103,232,249,0.35)",
                     }}
                   >
-                    <Telescope size={17} className="text-orange-300" />
+                    <Wrench size={17} className="text-cyan-300" />
                   </div>
                 </div>
 
@@ -146,25 +148,25 @@ export default function VersionNotification() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-white font-bold text-base tracking-tight shimmer-text">
-                      Observatory Tool
+                      v1.0 is Live
                     </h3>
                     <span
                       className="notif-mono blink-tag text-[9px] font-medium px-1.5 py-0.5 rounded"
                       style={{
-                        background: "rgba(251,146,60,0.12)",
-                        border: "1px solid rgba(251,146,60,0.3)",
-                        color: "#fb923c",
+                        background: "rgba(34,211,238,0.12)",
+                        border: "1px solid rgba(34,211,238,0.3)",
+                        color: "#67e8f9",
                         letterSpacing: "0.1em",
                       }}
                     >
-                      NEW
+                      STABLE
                     </span>
                   </div>
                   <p
                     className="notif-mono text-[10px] mt-0.5 tracking-widest font-medium"
                     style={{ color: "rgba(103,232,249,0.65)" }}
                   >
-                    MODULE USAGE MONITOR — ACTIVE
+                    BUGS FIXED — MORE COMING SOON
                   </p>
                 </div>
               </div>
@@ -209,7 +211,7 @@ export default function VersionNotification() {
 
             {/* Feature chips */}
             <div className="flex flex-wrap gap-1.5 mb-3">
-              {["🔭 Observatory Tool", "📊 Usage Tracking", "🧹 Auto Cleanup"].map(
+              {["✅ Previous Bugs Fixed", "⚡ v1.0 Stable", "🛠️ WP Completion Soon"].map(
                 (tag) => (
                   <span
                     key={tag}
@@ -232,36 +234,36 @@ export default function VersionNotification() {
               className="text-sm leading-relaxed"
               style={{ color: "rgba(148,163,184,0.9)" }}
             >
-              We've introduced an{" "}
-              <span style={{ color: "#67e8f9", fontWeight: 600 }}>
-                Observatory Tool
-              </span>{" "}
-              that monitors module usage across the platform. Any module found{" "}
-              <span style={{ color: "rgba(148,163,184,0.9)" }}>inactive</span>{" "}
-              will be automatically removed after{" "}
-              <span style={{ color: "#f87171", fontWeight: 700 }}>14 days</span>{" "}
-              without prior notification — keeping your workspace{" "}
               <span style={{ color: "#86efac", fontWeight: 600 }}>
-                lean and bloat-free
+                Version 1.0 is now live
+              </span>{" "}
+              with all previously reported bugs resolved. The platform is stable
+              and ready for full use. Stay tuned —{" "}
+              <span style={{ color: "#67e8f9", fontWeight: 600 }}>
+                Manual WP Completion
+              </span>{" "}
+              is currently in development and will be rolling out in the{" "}
+              <span style={{ color: "#c4b5fd", fontWeight: 600 }}>
+                coming days
               </span>
               .
             </p>
 
-            {/* Warning note */}
+            {/* Coming soon note */}
             <div
               className="mt-3 flex items-start gap-2 rounded-lg px-3 py-2"
               style={{
-                background: "rgba(239,68,68,0.07)",
-                border: "1px solid rgba(239,68,68,0.18)",
+                background: "rgba(167,139,250,0.07)",
+                border: "1px solid rgba(167,139,250,0.2)",
               }}
             >
-              <span className="text-red-400 text-xs mt-0.5">⚠</span>
+              <span className="text-purple-400 text-xs mt-0.5">🛠️</span>
               <p
                 className="notif-mono text-[10px] leading-relaxed"
-                style={{ color: "rgba(252,165,165,0.85)" }}
+                style={{ color: "rgba(196,181,253,0.85)" }}
               >
-                Ensure your team actively uses all assigned modules to avoid
-                automatic removal. No prior notice will be given.
+                Manual WP Completion feature is under active development.
+                No action needed — it will be available without any reinstallation.
               </p>
             </div>
 
@@ -271,8 +273,8 @@ export default function VersionNotification() {
                 <div
                   className="w-1.5 h-1.5 rounded-full"
                   style={{
-                    background: "#fb923c",
-                    boxShadow: "0 0 6px rgba(251,146,60,0.8)",
+                    background: "#67e8f9",
+                    boxShadow: "0 0 6px rgba(103,232,249,0.8)",
                   }}
                 />
                 <span
@@ -304,8 +306,8 @@ export default function VersionNotification() {
               style={{
                 width: `${progress}%`,
                 background:
-                  "linear-gradient(90deg, rgba(251,146,60,0.9), rgba(239,68,68,0.8))",
-                boxShadow: "0 0 8px rgba(251,146,60,0.5)",
+                  "linear-gradient(90deg, rgba(103,232,249,0.9), rgba(167,139,250,0.8))",
+                boxShadow: "0 0 8px rgba(103,232,249,0.5)",
               }}
             />
           </div>
