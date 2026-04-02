@@ -181,6 +181,10 @@ const Employees: React.FC = () => {
           createdAt: t.created_at,
           revenue: Number(t.revenue || t.total_amount || 0),
           amount: Number(t.total_amount || 0),
+          customerName: t.customer_name || '',
+          customerPhone: t.customer_phone || '',
+          boardName: t.board_name || '',
+          description: t.description || '',
         }));
       });
       setAllTasks(flat);
@@ -1072,6 +1076,8 @@ const Employees: React.FC = () => {
                       <TableHead>S.No</TableHead>
                       <TableHead>Customer</TableHead>
                       <TableHead>Service</TableHead>
+                      <TableHead>Board</TableHead>
+                      <TableHead>Description</TableHead>
                       <TableHead>Revenue</TableHead>
                       <TableHead>Payment Status</TableHead>
                       <TableHead>Date</TableHead>
@@ -1099,7 +1105,7 @@ const Employees: React.FC = () => {
                         return (
                           <TableRow>
                             <TableCell
-                              colSpan={6}
+                              colSpan={8}
                               className="text-center py-8 text-muted-foreground"
                             >
                               No tasks found
@@ -1119,6 +1125,10 @@ const Employees: React.FC = () => {
                                   " ",
                                 )
                               : "Xerox/Other"}
+                          </TableCell>
+                          <TableCell>{task.boardName || "-"}</TableCell>
+                          <TableCell className="max-w-[150px] truncate">
+                            {task.description || "-"}
                           </TableCell>
                           <TableCell>₹{task.revenue}</TableCell>
                           <TableCell>

@@ -350,16 +350,23 @@ router.get("/stats/employees", auth, async (req, res) => {
   try {
     const tasks = await sql`
       SELECT
-        employee_id,
-        service_type,
-        form_service_type,
-        work_status,
-        payment_status,
-        revenue,
-        total_amount,
-        deduction_amount,
-        created_at
-      FROM tasks
+        t.id,
+        t.employee_id,
+        t.customer_id,
+        t.service_type,
+        t.form_service_type,
+        t.work_status,
+        t.payment_status,
+        t.revenue,
+        t.total_amount,
+        t.deduction_amount,
+        t.created_at,
+        t.board_name,
+        t.description,
+        c.name  AS customer_name,
+        c.phone AS customer_phone
+      FROM tasks t
+      LEFT JOIN customers c ON c.id = t.customer_id
     `;
 
     // Group by employee
