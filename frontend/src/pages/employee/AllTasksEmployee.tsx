@@ -546,10 +546,10 @@ const AllTasksEmployee: React.FC = () => {
             onToDateChange={setToDate}
           />
         </div>
-        <Button onClick={handleDownload} variant="outline" disabled={isDownloading}>
+        {/* <Button onClick={handleDownload} variant="outline" disabled={isDownloading}>
           <Download className="h-4 w-4 mr-2" />
           {isDownloading ? "Downloading..." : "Download Excel"}
-        </Button>
+        </Button> */}
       </div>
 
       {/* Table */}
