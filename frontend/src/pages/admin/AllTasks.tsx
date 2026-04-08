@@ -92,18 +92,27 @@ const EmployeeCell = ({
 ========================= */
 const WhatsAppButton = ({ task }: { task: FormFillingTask }) => {
   const handleClick = () => {
-    const message =
-      // `✅ *Application Submitted Successfully*\n\n` +
-      `Dear ${task.customerName},\n\n` +
-      `Greetings and welcome to the *Cyber City*!,\n` +
-      `We are pleased to inform you that your application has been successfully submitted.\n\n` +
-      `📋 *Application Details*\n` +
-      `- Portal: ${task.boardName || "N/A"}\n` +
-      `- Service: ${task.description || "N/A"}\n` +
-      `- Application ID: \`${task.applicationId || "N/A"}\`\n` +
-      `- Password: \`${task.password || "N/A"}\`\n\n` +
-      `👤 *Submitted By:* ${task.completedByName || task.employeeName || "Cyber City Team"}\n\n` +
-      `For any queries, feel free to contact us.\n\n`;
+    const message = `Hello \u{1F44B}
+Hope you're doing well!  \u{1F60A}
+
+Dear ${task.customerName},
+
+Greetings and welcome to *Cyber City*!
+We are pleased to inform you that your application has been successfully submitted.
+
+*Application Details*
+- Portal: ${task.boardName || "N/A"}
+- Service: ${task.description || "N/A"}
+- Application ID: ${task.applicationId || "N/A"}
+- Password: ${task.password || "N/A"}
+
+*Submitted By:* ${task.completedByName || task.employeeName || "Cyber City Team"}
+
+For any queries, feel free to contact us.
+
+Thank you
+*Cybercity*
+9777787447`;
     // `*Thank you for choosing Cyber City!*`;
 
     const phone = task.customerPhone.replace(/\D/g, "");
