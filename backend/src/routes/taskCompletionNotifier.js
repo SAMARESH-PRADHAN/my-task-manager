@@ -32,7 +32,9 @@ const message = `✅ *Application Submitted Successfully*
 
 Dear ${task.customer_name},
 
-Greetings from *Cyber City*! We are pleased to inform you that your application has been successfully submitted.
+Greetings and welcome to the *Cyber City*! 
+
+We are pleased to inform you that your application has been successfully submitted.
 
 📋 *Application Details*
 - Portal: ${task.board_name || "N/A"}
@@ -42,9 +44,11 @@ Greetings from *Cyber City*! We are pleased to inform you that your application 
 
 👤 *Submitted By:* ${task.employee_name || "Cyber City Team"}
 
-For any queries, feel free to contact us.
+For any queries, feel free to contact us.`;
 
-*Thank you for choosing Cyber City!* `;
+// *Thank you for choosing Cyber City!* 
+
+
     await sendWhatsAppMessage(task.customer_phone, message);
 
     console.log("✅ Completion message sent to", task.customer_phone);
