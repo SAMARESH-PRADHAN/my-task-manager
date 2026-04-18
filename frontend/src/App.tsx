@@ -41,7 +41,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <VersionNotification />
+      {/* <VersionNotification /> */}
       <AuthProvider>
         <DataProvider>
           <TooltipProvider>
