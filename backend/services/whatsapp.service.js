@@ -2,9 +2,6 @@ import axios from "axios";
 
 const DIVINE_BASE_URL = "http://141.148.212.206";
 
-
-// Unm:cybercityjsp
-// Pw:12345678
 const DIVINE_API_KEY = process.env.DIVINE_API_KEY;
 
 const formatPhone = (phone) => {
