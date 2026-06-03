@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const DIVINE_BASE_URL = "http://141.148.212.206";
+const DIVINE_BASE_URL = process.env.DIVINE_BASE_URL;
 
 const DIVINE_API_KEY = process.env.DIVINE_API_KEY;
 
@@ -11,6 +11,10 @@ const formatPhone = (phone) => {
 };
 
 export async function sendWhatsAppMessage(phone, userMessage) {
+   // ✅ Add a guard so you catch config issues early
+  if (!DIVINE_BASE_URL || !DIVINE_API_KEY) {
+    throw new Error("Missing DIVINE_BASE_URL or DIVINE_API_KEY in environment");
+  }
   try {
     // ✅ WhatsApp Template
     const finalMessage = `Hello 👋,
