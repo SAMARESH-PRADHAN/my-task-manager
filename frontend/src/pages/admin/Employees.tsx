@@ -57,7 +57,7 @@ import { downloadExcel } from "@/utils/excel";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 
 const ITEMS_PER_PAGE = 6;
-
+const MAX_EMPLOYEES = 10;
 // ─── Shimmer Skeleton Helpers ────────────────────────────────────────────────
 
 const shimmerStyle: React.CSSProperties = {
@@ -371,27 +371,38 @@ const Employees: React.FC = () => {
   };
 
   const handleAddEmployee = () => {
-    if (
-      !newEmployee.name ||
-      !newEmployee.email ||
-      !newEmployee.phone ||
-      !newEmployee.password
-    ) {
-      toast.error("Please fill all required fields");
-      return;
-    }
-
-    addEmployee(newEmployee);
-    toast.success("Employee added successfully!");
+  // Maximum employee limit
+  if (employees.length >= MAX_EMPLOYEES) {
+    toast.error("You are exceeding the employee limit. You can't add more employees.");
     setIsAddModalOpen(false);
-    setNewEmployee({
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
-      password: "",
-    });
-  };
+    return;
+  }
+
+  // Required field validation
+  if (
+    !newEmployee.name ||
+    !newEmployee.email ||
+    !newEmployee.phone ||
+    !newEmployee.password
+  ) {
+    toast.error("Please fill all required fields");
+    return;
+  }
+
+  addEmployee(newEmployee);
+
+  toast.success("Employee added successfully!");
+
+  setIsAddModalOpen(false);
+
+  setNewEmployee({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    password: "",
+  });
+};
 
   const handleEditEmployee = () => {
     if (!editingEmployee) return;
