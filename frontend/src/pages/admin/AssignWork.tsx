@@ -135,7 +135,11 @@ const AssignWork: React.FC = () => {
     const fetchBoards = async () => {
       try {
         const res = await api.get("/boards");
-        setBoards(res.data.map((b: any) => b.name));
+        setBoards(
+  res.data
+    .map((b: any) => String(b.name || "").trim())
+    .filter((name: string) => name !== "")
+);
       } catch (err) {
         console.error("Failed to load boards", err);
       }
