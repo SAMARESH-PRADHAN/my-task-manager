@@ -59,16 +59,36 @@ const NewTask: React.FC = () => {
     return total - deduction;
   }, [amount, deductionAmount]);
 
-  useEffect(() => {
-    const fetchBoards = async () => {
-      if (!formServiceType) return;
+  
+useEffect(() => {
+  const fetchBoards = async () => {
+    if (!formServiceType) {
+      setBoards([]);
+      setBoardName("");
+      return;
+    }
 
-      const res = await api.get(`/boards?service_type=${formServiceType}`);
-      setBoards(res.data.map((b: any) => b.name));
-    };
+    try {
+      const res = await api.get(
+        `/boards?service_type=${formServiceType}`
+      );
 
-    fetchBoards();
-  }, [formServiceType]);
+      const validBoards: string[] = (
+        Array.isArray(res.data) ? res.data : []
+      )
+        .map((b: any) => String(b?.name ?? "").trim())
+        .filter((name: string) => name.length > 0);
+
+      setBoards(Array.from(new Set<string>(validBoards)));
+    } catch (error) {
+      console.error("Failed to load boards:", error);
+      setBoards([]);
+    }
+  };
+
+  fetchBoards();
+}, [formServiceType]);
+
 
   // 🔧 LOGIC FIX (async + await, UI untouched)
   const handleSubmit = async (e: React.FormEvent) => {
@@ -275,15 +295,19 @@ const NewTask: React.FC = () => {
                       <SelectValue placeholder="Select Board" />
                     </SelectTrigger>
 
-                    <SelectContent>
-                      {boards.map((b) => (
-                        <SelectItem key={b} value={b}>
-                          {b}
-                        </SelectItem>
-                      ))}
+                    
+<SelectContent>
+  {boards
+    .filter((board) => board.trim().length > 0)
+    .map((board) => (
+      <SelectItem key={board} value={board}>
+        {board}
+      </SelectItem>
+    ))}
 
-                      <SelectItem value="custom">Custom</SelectItem>
-                    </SelectContent>
+  <SelectItem value="custom">Custom</SelectItem>
+</SelectContent>
+
                   </Select>
                 </div>
                 {boardName === "custom" && (
