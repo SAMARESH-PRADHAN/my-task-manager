@@ -152,7 +152,11 @@ const MyTasks: React.FC = () => {
 
       const res = await api.get(url);
 
-      setBoards(res.data.map((b: any) => b.name));
+      const validBoards: string[] = res.data
+        .map((b: any) => String(b.name ?? "").trim())
+        .filter((name: string) => name.length > 0);
+
+      setBoards(Array.from(new Set<string>(validBoards)));
     } catch (err) {
       console.error("Failed to load boards", err);
     }
@@ -703,11 +707,13 @@ const MyTasks: React.FC = () => {
                       </SelectTrigger>
 
                       <SelectContent className="bg-popover border border-border z-50">
-                        {boards.map((b) => (
-                          <SelectItem key={b} value={b}>
-                            {b}
-                          </SelectItem>
-                        ))}
+                        {boards
+                          .filter((b) => b.trim().length > 0)
+                          .map((b) => (
+                            <SelectItem key={b} value={b}>
+                              {b}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
