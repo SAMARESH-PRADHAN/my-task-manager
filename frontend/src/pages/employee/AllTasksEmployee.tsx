@@ -179,18 +179,28 @@ const AllTasksEmployee: React.FC = () => {
       fetchMyTasks(1, searchQuery, fromDate, toDate, boardFilter, activeTab, statusFilter);
     }, 400);
   }, [searchQuery, fromDate, toDate, boardFilter, statusFilter]);
-  const fetchBoards = async (serviceType?: string) => {
-    try {
-      const url = serviceType
-        ? `/boards?service_type=${serviceType}`
-        : "/boards";
+ const fetchBoards = async (serviceType?: string) => {
+  try {
+    const url = serviceType
+      ? `/boards?service_type=${serviceType}`
+      : "/boards";
 
-      const res = await api.get(url);
-      setBoards(res.data.map((b: any) => b.name));
-    } catch (err) {
-      console.error("Failed to load boards", err);
-    }
-  };
+    const res = await api.get(url);
+
+    // Keep only valid, non-empty board names
+    const validBoards: string[] = (
+      Array.isArray(res.data) ? res.data : []
+    )
+      .map((board: any) => String(board?.name ?? "").trim())
+      .filter((name: string) => name.length > 0);
+
+    // Remove duplicate board names
+    setBoards(Array.from(new Set<string>(validBoards)));
+  } catch (err) {
+    console.error("Failed to load boards:", err);
+    setBoards([]);
+  }
+};
   // Edit modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingFormTask, setEditingFormTask] =
@@ -956,12 +966,14 @@ const AllTasksEmployee: React.FC = () => {
                     </SelectTrigger>
 
                     <SelectContent className="bg-popover border border-border z-50">
-                      {boards.map((board) => (
-                        <SelectItem key={board} value={board}>
-                          {board}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+  {boards
+    .filter((board) => board.trim().length > 0)
+    .map((board) => (
+      <SelectItem key={board} value={board}>
+        {board}
+      </SelectItem>
+    ))}
+</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">

@@ -322,6 +322,28 @@ const AllTasks: React.FC = () => {
   const boardsCache = useRef<{ [key: string]: any[] }>({});
   const skipNextFetch = useRef(false);
 
+  // const fetchBoards = async (serviceType?: string) => {
+  //   const key = serviceType || "all";
+
+  //   if (boardsCache.current[key]) {
+  //     setBoards(boardsCache.current[key]);
+  //     return;
+  //   }
+
+  //   try {
+  //     const url = serviceType
+  //       ? `/boards?service_type=${serviceType}`
+  //       : "/boards";
+
+  //     const res = await api.get(url);
+
+  //     boardsCache.current[key] = res.data;
+  //     setBoards(res.data);
+  //   } catch (err) {
+  //     console.error("Failed to load boards", err);
+  //   }
+  // };
+
   const fetchBoards = async (serviceType?: string) => {
     const key = serviceType || "all";
 
@@ -337,12 +359,27 @@ const AllTasks: React.FC = () => {
 
       const res = await api.get(url);
 
-      boardsCache.current[key] = res.data;
-      setBoards(res.data);
+      const validBoards: { id: number; name: string }[] = (
+        Array.isArray(res.data) ? res.data : []
+      )
+        .map((board: any) => ({
+          id: Number(board.id),
+          name: String(board.name ?? "").trim(),
+        }))
+        .filter((board) => board.name.length > 0 && Number.isFinite(board.id));
+
+      const uniqueBoards = Array.from(
+        new Map(validBoards.map((board) => [board.name, board])).values(),
+      );
+
+      boardsCache.current[key] = uniqueBoards;
+      setBoards(uniqueBoards);
     } catch (err) {
-      console.error("Failed to load boards", err);
+      console.error("Failed to load boards:", err);
+      setBoards([]);
     }
   };
+
   const paginatedTasks = currentTasks;
 
   const handleDownload = async () => {
@@ -1233,11 +1270,16 @@ const AllTasks: React.FC = () => {
                       <SelectValue placeholder="Select employee" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border border-border z-50">
-                      {employees.map((emp) => (
-                        <SelectItem key={emp.id} value={emp.id}>
-                          {emp.name}
-                        </SelectItem>
-                      ))}
+                      {employees
+                        .filter((emp) => String(emp.id ?? "").trim().length > 0)
+                        .map((emp) => (
+                          <SelectItem
+                            key={String(emp.id)}
+                            value={String(emp.id)}
+                          >
+                            {emp.name || "Unnamed Employee"}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1342,12 +1384,18 @@ const AllTasks: React.FC = () => {
                     <SelectTrigger>
                       <SelectValue placeholder="Select board" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {boards.map((b) => (
-                        <SelectItem key={b.id} value={b.name}>
-                          {b.name}
-                        </SelectItem>
-                      ))}
+                    <SelectContent className="bg-popover border border-border z-50">
+                      {boards
+                        .filter(
+                          (board) =>
+                            board.name.trim().length > 0 &&
+                            Number.isFinite(board.id),
+                        )
+                        .map((board) => (
+                          <SelectItem key={board.id} value={board.name}>
+                            {board.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1540,11 +1588,16 @@ const AllTasks: React.FC = () => {
                       <SelectValue placeholder="Select employee" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border border-border z-50">
-                      {employees.map((emp) => (
-                        <SelectItem key={emp.id} value={emp.id}>
-                          {emp.name}
-                        </SelectItem>
-                      ))}
+                      {employees
+                        .filter((emp) => String(emp.id ?? "").trim().length > 0)
+                        .map((emp) => (
+                          <SelectItem
+                            key={String(emp.id)}
+                            value={String(emp.id)}
+                          >
+                            {emp.name || "Unnamed Employee"}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
